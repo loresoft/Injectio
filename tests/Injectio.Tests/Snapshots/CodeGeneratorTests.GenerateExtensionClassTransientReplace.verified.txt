@@ -21,8 +21,8 @@ namespace Microsoft.Extensions.DependencyInjection
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.Replace(
                 serviceCollection,
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
-                    typeof(global::ServiceDiscovery.SourceGenerator.Attributes.Tests.IService1),
-                    typeof(global::ServiceDiscovery.SourceGenerator.Attributes.Tests.Service1), 
+                    typeof(global::Injectio.Tests.IService1),
+                    typeof(global::Injectio.Tests.Service1), 
                     global::global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient
                 )
             );

@@ -6,12 +6,12 @@
     <Authors>LoreSoft</Authors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>ioc;dependency-injection;inversion-of-control;di;injection-container;injection-framework;csharp-sourcegenerator</PackageTags>
-    <PackageProjectUrl>https://github.com/loresoft/ServiceDiscovery.SourceGenerator</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/loresoft/Injectio</PackageProjectUrl>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageIcon>logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/loresoft/ServiceDiscovery.SourceGenerator</RepositoryUrl>
+    <RepositoryUrl>https://github.com/loresoft/Injectio</RepositoryUrl>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
 

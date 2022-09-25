@@ -53,7 +53,7 @@ public class ServiceDiscoveryGenerator : IIncrementalGenerator
         string result = CodeGenerator.GenerateExtensionClass(moduleRegistrations, serviceRegistrations, assemblyName);
 
         // add source file
-        context.AddSource("ServiceDiscovery.g.cs", SourceText.From(result, Encoding.UTF8));
+        context.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
     }
 
     private static IReadOnlyList<ModuleRegistration> GetModuleRegistrations(

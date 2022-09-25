@@ -19,11 +19,11 @@ public class CodeGeneratorTests
         {
             new ServiceRegistration
             {
-                ImplementationType = "ServiceDiscovery.SourceGenerator.Attributes.Tests.Service1",
+                ImplementationType = "Injectio.Tests.Service1",
                 Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
                 ServiceTypes = new HashSet<string>
                 {
-                    "ServiceDiscovery.SourceGenerator.Attributes.Tests.IService1"
+                    "Injectio.Tests.IService1"
                 }
             }
         };
@@ -41,14 +41,14 @@ public class CodeGeneratorTests
         {
             new ServiceRegistration
             {
-                ImplementationType = "ServiceDiscovery.SourceGenerator.Attributes.Tests.ServiceMultiple",
+                ImplementationType = "Injectio.Tests.ServiceMultiple",
                 Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
                 Registration = "RegistrationStrategy.SelfWithInterfaces",
                 ServiceTypes = new HashSet<string>
                 {
-                    "ServiceDiscovery.SourceGenerator.Attributes.Tests.ServiceMultiple",
-                    "ServiceDiscovery.SourceGenerator.Attributes.Tests.IService1",
-                    "ServiceDiscovery.SourceGenerator.Attributes.Tests.IService2",
+                    "Injectio.Tests.ServiceMultiple",
+                    "Injectio.Tests.IService1",
+                    "Injectio.Tests.IService2",
                 }
             }
         };
@@ -66,12 +66,12 @@ public class CodeGeneratorTests
         {
             new ServiceRegistration
             {
-                ImplementationType = "ServiceDiscovery.SourceGenerator.Attributes.Tests.Service1",
+                ImplementationType = "Injectio.Tests.Service1",
                 Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped",
                 Duplicate = "DuplicateStrategy.Append",
                 ServiceTypes = new HashSet<string>
                 {
-                    "ServiceDiscovery.SourceGenerator.Attributes.Tests.IService1"
+                    "Injectio.Tests.IService1"
                 }
             }
         };
@@ -89,12 +89,12 @@ public class CodeGeneratorTests
         {
             new ServiceRegistration
             {
-                ImplementationType = "ServiceDiscovery.SourceGenerator.Attributes.Tests.Service1",
+                ImplementationType = "Injectio.Tests.Service1",
                 Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient",
                 Duplicate = "DuplicateStrategy.Replace",
                 ServiceTypes = new HashSet<string>
                 {
-                    "ServiceDiscovery.SourceGenerator.Attributes.Tests.IService1"
+                    "Injectio.Tests.IService1"
                 }
             }
         };
