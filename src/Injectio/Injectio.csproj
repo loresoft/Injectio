@@ -6,6 +6,7 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     <DevelopmentDependency>true</DevelopmentDependency>
     <NoPackageAnalysis>true</NoPackageAnalysis>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
