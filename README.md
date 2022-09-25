@@ -1,5 +1,6 @@
 # Injectio
-Source generator that generates dependency injection registration during compile time
+
+Source generator that automatically registers discovered services in the dependency injection container
 
 ## Features
 
