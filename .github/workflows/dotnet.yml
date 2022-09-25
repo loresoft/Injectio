@@ -41,7 +41,7 @@ jobs:
       run: dotnet test --no-build --configuration Release --verbosity normal
       
     - name: Create Packages
-      run: 'dotnet pack --configuration Release --include-symbols --include-source --no-build --output "${{env.BUILD_PATH}}" -p:Version="${{env.BUILD_VERSION}}"'
+      run: 'dotnet pack --configuration Release --no-build --output "${{env.BUILD_PATH}}" -p:Version="${{env.BUILD_VERSION}}"'
 
     - name: Upload Packages
       if: success() && github.event_name != 'pull_request'
