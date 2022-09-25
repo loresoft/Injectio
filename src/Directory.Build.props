@@ -1,0 +1,47 @@
+<Project>
+
+  <PropertyGroup Label="Package">
+    <Description>Source generator that automatically registers discovered services in dependency injection</Description>
+    <Copyright>Copyright © $([System.DateTime]::Now.ToString(yyyy)) LoreSoft</Copyright>
+    <Authors>LoreSoft</Authors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageTags>ioc;dependency-injection;inversion-of-control;di;injection-container;injection-framework;csharp-sourcegenerator</PackageTags>
+    <PackageProjectUrl>https://github.com/loresoft/ServiceDiscovery.SourceGenerator</PackageProjectUrl>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/loresoft/ServiceDiscovery.SourceGenerator</RepositoryUrl>
+    <NoWarn>1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DebugType>portable</DebugType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include=".\..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <Visible>false</Visible>
+    </None>
+    <None Include=".\..\..\logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <Visible>false</Visible>
+    </None>
+    <None Include=".\..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <Visible>false</Visible>
+    </None>
+  </ItemGroup>
+
+</Project>

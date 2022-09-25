@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Injectio.Tests.Library": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\tests\\Injectio.Tests.Library\\Injectio.Tests.Library.csproj"
+    },
+    "Injectio.Tests.Console": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\tests\\Injectio.Tests.Console\\Injectio.Tests.Console.csproj"
+    }
+  }
+}
