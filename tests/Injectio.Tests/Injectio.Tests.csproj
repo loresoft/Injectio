@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Injectio.Attributes\Injectio.Attributes.csproj" />
-    <ProjectReference Include="..\..\src\Injectio\Injectio.csproj" />
+    <ProjectReference Include="..\..\src\Injectio.Generators\Injectio.Generators.csproj" />
   </ItemGroup>
 
 </Project>

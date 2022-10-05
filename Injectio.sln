@@ -7,12 +7,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{C2680CC3
 	ProjectSection(SolutionItems) = preProject
 		src\Directory.Build.props = src\Directory.Build.props
 		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
+		Injectio.nuspec = Injectio.nuspec
 		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{4A8CBCD4-2F78-466D-B60B-B983BAA90B5A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Injectio", "src\Injectio\Injectio.csproj", "{F273AB40-E446-4184-A309-66A22D77D310}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Injectio.Generators", "src\Injectio.Generators\Injectio.Generators.csproj", "{F273AB40-E446-4184-A309-66A22D77D310}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Injectio.Attributes", "src\Injectio.Attributes\Injectio.Attributes.csproj", "{2784BA87-06E2-4CA7-B734-6170DF0557BA}"
 EndProject
