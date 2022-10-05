@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Injectio;
+namespace Injectio.Generators;
 
 internal static class SyntaxCollector
 {

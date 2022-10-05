@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 using Microsoft.CodeAnalysis;
 
-namespace Injectio.Extensions;
+namespace Injectio.Generators.Extensions;
 
 public static class StringExtensions
 {

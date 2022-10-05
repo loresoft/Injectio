@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Injectio.Extensions;
+namespace Injectio.Generators.Extensions;
 
 public static class EnumerableExtensions
 {

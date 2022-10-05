@@ -1,4 +1,4 @@
-namespace Injectio;
+namespace Injectio.Generators;
 
 internal static class KnownTypes
 {

@@ -1,6 +1,6 @@
-using Injectio.Extensions;
+using Injectio.Generators.Extensions;
 
-namespace Injectio;
+namespace Injectio.Generators;
 
 public static class CodeGenerator
 {

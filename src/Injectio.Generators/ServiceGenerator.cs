@@ -7,10 +7,10 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
-namespace Injectio;
+namespace Injectio.Generators;
 
 [Generator]
-public class ServiceDiscoveryGenerator : IIncrementalGenerator
+public class ServiceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -47,7 +47,7 @@ public class ServiceDiscoveryGenerator : IIncrementalGenerator
         var moduleRegistrations = GetModuleRegistrations(compilation, methodDeclarations, context);
         var serviceRegistrations = GetServiceRegistrations(compilation, classDeclarations, context);
 
-        var assemblyName =  Regex.Replace(compilation.AssemblyName, "\\W", "");
+        var assemblyName = Regex.Replace(compilation.AssemblyName, "\\W", "");
 
         // generate registration method
         string result = CodeGenerator.GenerateExtensionClass(moduleRegistrations, serviceRegistrations, assemblyName);

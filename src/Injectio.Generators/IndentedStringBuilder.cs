@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Injectio;
+namespace Injectio.Generators;
 
 /// <summary>
 /// A thin wrapper over <see cref="StringBuilder" /> that adds indentation to each line built.

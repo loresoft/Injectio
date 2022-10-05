@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+using Injectio.Generators;
+
 using VerifyXunit;
 
 using Xunit;
