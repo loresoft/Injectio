@@ -27,16 +27,16 @@ public class ServiceGenerator : IIncrementalGenerator
         var classProviders = classProviderTypes.Collect();
         var methodProviders = methodProviderTypes.Collect();
 
-        var providers = context.CompilationProvider
-            .Combine(classProviders)
-            .Combine(methodProviders);
+
+        IncrementalValueProvider<((ImmutableArray<ClassDeclarationSyntax> ClassDeclarations, ImmutableArray<MethodDeclarationSyntax> MethodDeclarations) Providers, Compilation Compilation)> providers
+            = classProviders.Combine(methodProviders).Combine(context.CompilationProvider);
 
         context.RegisterSourceOutput(
             source: providers,
             action: static (context, source) => Execute(
-                compilation: source.Item1.Left,
-                classDeclarations: source.Item1.Right,
-                methodDeclarations: source.Item2,
+                compilation: source.Compilation,
+                classDeclarations: source.Providers.ClassDeclarations,
+                methodDeclarations: source.Providers.MethodDeclarations,
                 sourceContext: context
             )
         );

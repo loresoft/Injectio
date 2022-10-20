@@ -18,6 +18,11 @@ Add the package project to your projects.
 
 `dotnet add package Injectio`
 
+Prevent dependances from including Injectio
+
+```xml
+<PackageReference Include="Injectio" PrivateAssets="all" />
+```
 
 #### Add to container
 
