@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Text;
-using System.Text.RegularExpressions;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -52,10 +51,8 @@ public class ServiceGenerator : IIncrementalGenerator
         var moduleRegistrations = GetModuleRegistrations(compilation, methodDeclarations, sourceContext);
         var serviceRegistrations = GetServiceRegistrations(compilation, classDeclarations, sourceContext);
 
-        var assemblyName = Regex.Replace(compilation.AssemblyName, "\\W", "");
-
         // generate registration method
-        string result = CodeGenerator.GenerateExtensionClass(moduleRegistrations, serviceRegistrations, assemblyName);
+        string result = CodeGenerator.GenerateExtensionClass(moduleRegistrations, serviceRegistrations, compilation.AssemblyName);
 
         // add source file
         sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));

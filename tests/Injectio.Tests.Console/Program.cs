@@ -22,6 +22,6 @@ Console.ReadLine();
 public interface ILocalService { }
 
 
-[RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces)]
+[RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces, Duplicate = DuplicateStrategy.Replace)]
 public class LocalService : ILocalService { }
 

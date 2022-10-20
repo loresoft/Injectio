@@ -84,7 +84,7 @@ public class FactoryService : IService
 ```c#
 public class RegistrationModule
 {
-    [RegisterModule]
+    [RegisterServices]
     public static void Register(IServiceCollection services)
     {
         services.TryAddTransient<IModuleService, ModuleService>();

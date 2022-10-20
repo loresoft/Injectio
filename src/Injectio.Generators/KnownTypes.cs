@@ -16,7 +16,7 @@ internal static class KnownTypes
     public const string ScopedAttributeTypeName = $"{ScopedAttributeShortName}Attribute";
     public const string ScopedAttributeFullName = $"{AbstractionNamespace}.{ScopedAttributeTypeName}";
 
-    public const string ModuleAttributeShortName = "RegisterModule";
+    public const string ModuleAttributeShortName = "RegisterServices";
     public const string ModuleAttributeTypeName = $"{ModuleAttributeShortName}Attribute";
     public const string ModuleAttributeFullName = $"{AbstractionNamespace}.{ModuleAttributeTypeName}";
 

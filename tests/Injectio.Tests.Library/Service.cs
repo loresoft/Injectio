@@ -52,7 +52,7 @@ public class ModuleService : IModuleService { }
 public class RegistrationModule
 {
 
-    [RegisterModule]
+    [RegisterServices]
     public void Register(IServiceCollection services)
     {
         services.TryAddTransient<IModuleService, ModuleService>();

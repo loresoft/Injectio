@@ -1,11 +1,11 @@
 namespace Injectio.Attributes;
 
 /// <summary>Attribute to indicate the method should be called to register services</summary>
-/// <example>use the RegisterModule attribute
+/// <example>use the RegisterServices attribute
 ///   <code>
 ///   public class RegistrationModule
 ///   {
-///       [RegisterModule]
+///       [RegisterServices]
 ///       public static void Register(IServiceCollection services)
 ///       {
 ///           services.TryAddTransient&lt;IModuleService, ModuleService&gt;();
@@ -14,7 +14,7 @@ namespace Injectio.Attributes;
 ///   </code>
 /// </example>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-public class RegisterModuleAttribute : Attribute
+public class RegisterServicesAttribute : Attribute
 {
 
 }
