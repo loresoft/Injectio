@@ -12,7 +12,7 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class DiscoveredServicesExtensions
     {
         /// <summary>
-        /// Adds discovered service registrations to the specified service collection
+        /// Adds discovered services from CodeGeneratorTests to the specified service collection
         /// </summary>
         /// <param name="serviceCollection">The service collection.</param>
         /// <returns>The service collection</returns>
