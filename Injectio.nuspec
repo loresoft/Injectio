@@ -13,6 +13,7 @@
     <copyright>Copyright © 2022 LoreSoft</copyright>
     <tags>ioc dependency-injection inversion-of-control di injection-container injection-framework csharp-sourcegenerator</tags>
     <repository type="git" url="https://github.com/loresoft/Injectio" />
+    <developmentDependency>true</developmentDependency>
     <dependencies>
       <group targetFramework=".NETStandard2.0">
         <dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="6.0.0" />

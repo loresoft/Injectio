@@ -33,7 +33,12 @@ public class ServiceGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(
             source: providers,
-            action: static (spc, source) => Execute(source.Item1.Left, source.Item1.Right, source.Item2, spc)
+            action: static (context, source) => Execute(
+                compilation: source.Item1.Left,
+                classDeclarations: source.Item1.Right,
+                methodDeclarations: source.Item2,
+                sourceContext: context
+            )
         );
     }
 
@@ -41,11 +46,11 @@ public class ServiceGenerator : IIncrementalGenerator
         Compilation compilation,
         ImmutableArray<ClassDeclarationSyntax> classDeclarations,
         ImmutableArray<MethodDeclarationSyntax> methodDeclarations,
-        SourceProductionContext context)
+        SourceProductionContext sourceContext)
     {
         // extract registration details
-        var moduleRegistrations = GetModuleRegistrations(compilation, methodDeclarations, context);
-        var serviceRegistrations = GetServiceRegistrations(compilation, classDeclarations, context);
+        var moduleRegistrations = GetModuleRegistrations(compilation, methodDeclarations, sourceContext);
+        var serviceRegistrations = GetServiceRegistrations(compilation, classDeclarations, sourceContext);
 
         var assemblyName = Regex.Replace(compilation.AssemblyName, "\\W", "");
 
@@ -53,13 +58,13 @@ public class ServiceGenerator : IIncrementalGenerator
         string result = CodeGenerator.GenerateExtensionClass(moduleRegistrations, serviceRegistrations, assemblyName);
 
         // add source file
-        context.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
+        sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
     }
 
     private static IReadOnlyList<ModuleRegistration> GetModuleRegistrations(
         Compilation compilation,
         IEnumerable<MethodDeclarationSyntax> methodDeclarations,
-        SourceProductionContext context)
+        SourceProductionContext sourceContext)
     {
         var moduleRegistrations = new List<ModuleRegistration>();
 
@@ -71,7 +76,7 @@ public class ServiceGenerator : IIncrementalGenerator
             if (methodSymbol == null)
                 continue;
 
-            ValidateParameters(context, methodDeclaration, methodSymbol);
+            ValidateParameters(sourceContext, methodDeclaration, methodSymbol);
 
             var registration = new ModuleRegistration
             {
@@ -90,7 +95,7 @@ public class ServiceGenerator : IIncrementalGenerator
     private static IReadOnlyList<ServiceRegistration> GetServiceRegistrations(
         Compilation compilation,
         IEnumerable<ClassDeclarationSyntax> classDeclarations,
-        SourceProductionContext context)
+        SourceProductionContext sourceContext)
     {
         var serviceRegistrations = new List<ServiceRegistration>();
 
