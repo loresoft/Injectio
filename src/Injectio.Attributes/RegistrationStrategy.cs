@@ -8,13 +8,13 @@ public enum RegistrationStrategy
     /// <summary>
     /// Registers each matching concrete type as itself
     /// </summary>
-    Self,
+    Self = 0,
     /// <summary>
     /// Registers each matching concrete type as all of its implemented interfaces.
     /// </summary>
-    ImplementedInterfaces,
+    ImplementedInterfaces = 1,
     /// <summary>
     /// Registers each matching concrete type as all of its implemented interfaces and itself
     /// </summary>
-    SelfWithInterfaces
+    SelfWithInterfaces = 2
 }

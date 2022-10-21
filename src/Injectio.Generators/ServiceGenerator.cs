@@ -139,40 +139,36 @@ public class ServiceGenerator : IIncrementalGenerator
 
     private static bool IncludeSelf(ServiceRegistration registration)
     {
-        // include self when nothing set only when no other service types set
-        if (registration.Registration == null)
-            return registration.ServiceTypes.Count == 0;
-
-        if (registration.Registration is int number && (number == 0 || number == 2))
-            return true;
-
-        if (registration.Registration is string text &&
-            (text == KnownTypes.RegistrationStrategySelfShortName
-                || text == KnownTypes.RegistrationStrategySelfTypeName
-                || text == KnownTypes.RegistrationStrategySelfWithInterfacesShortName
-                || text == KnownTypes.RegistrationStrategySelfWithInterfacesTypeName))
-            return true;
-
-        return false;
+        return registration.Registration switch
+        {
+            // include self when nothing set only when no other service types set
+            null => registration.ServiceTypes.Count == 0,
+            int and (0 or 2) => true,
+            string and (
+                KnownTypes.RegistrationStrategySelfShortName
+                or KnownTypes.RegistrationStrategySelfTypeName
+                or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+                or KnownTypes.RegistrationStrategySelfWithInterfacesTypeName
+            ) => true,
+            _ => false
+        };
     }
 
     private static bool IncludeInterfaces(ServiceRegistration registration)
     {
-        // include interfaces when nothing set only when no other service types set
-        if (registration.Registration == null)
-            return registration.ServiceTypes.Count == 0;
-
-        if (registration.Registration is int number && (number == 1 || number == 2))
-            return true;
-
-        if (registration.Registration is string text &&
-            (text == KnownTypes.RegistrationStrategyImplementedInterfacesShortName
-                || text == KnownTypes.RegistrationStrategyImplementedInterfacesTypeName
-                || text == KnownTypes.RegistrationStrategySelfWithInterfacesShortName
-                || text == KnownTypes.RegistrationStrategySelfWithInterfacesTypeName))
-            return true;
-
-        return false;
+        return registration.Registration switch
+        {
+            // include interfaces when nothing set only when no other service types set
+            null => registration.ServiceTypes.Count == 0,
+            int and (1 or 2) => true,
+            string and (
+                KnownTypes.RegistrationStrategyImplementedInterfacesShortName
+                or KnownTypes.RegistrationStrategyImplementedInterfacesTypeName
+                or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+                or KnownTypes.RegistrationStrategySelfWithInterfacesTypeName
+            ) => true,
+            _ => false
+        };
     }
 
     private static bool IsKnownAttribute(string attributeName, out string serviceLifetime)
@@ -203,16 +199,16 @@ public class ServiceGenerator : IIncrementalGenerator
 
     private static bool IsServiceCollection(IParameterSymbol parameterSymbol)
     {
-        return parameterSymbol.Type is ITypeSymbol
+        return parameterSymbol.Type is
         {
             Name: "IServiceCollection" or "ServiceCollection",
-            ContainingNamespace: INamespaceSymbol
+            ContainingNamespace:
             {
                 Name: "DependencyInjection",
-                ContainingNamespace: INamespaceSymbol
+                ContainingNamespace:
                 {
                     Name: "Extensions",
-                    ContainingNamespace: INamespaceSymbol
+                    ContainingNamespace:
                     {
                         Name: "Microsoft"
                     }
@@ -281,9 +277,12 @@ public class ServiceGenerator : IIncrementalGenerator
         if (!IsKnownAttribute(attributeName, out var serviceLifetime))
             return null;
 
+        // defaults
         var registration = new ServiceRegistration
         {
-            Lifetime = serviceLifetime
+            Lifetime = serviceLifetime,
+            Duplicate = 0, // Skip
+            Registration = 2 // SelfWithInterfaces
         };
 
         foreach (var parameter in attribute.NamedArguments)

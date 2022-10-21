@@ -7,6 +7,15 @@ namespace Injectio.Attributes;
 public abstract class RegisterAttribute : Attribute
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="RegisterAttribute"/> class.
+    /// </summary>
+    protected RegisterAttribute()
+    {
+        Duplicate = DuplicateStrategy.Skip;
+        Registration = RegistrationStrategy.SelfWithInterfaces;
+    }
+
+    /// <summary>
     /// The <see cref="Type"/> of the service
     /// </summary>
     /// <seealso cref="P:Microsoft.Extensions.DependencyInjection.ServiceDescriptor.ServiceType"/>
@@ -28,7 +37,7 @@ public abstract class RegisterAttribute : Attribute
     /// <value>
     /// The duplicate.
     /// </value>
-    public DuplicateStrategy Duplicate { get; set; } = DuplicateStrategy.Skip;
+    public DuplicateStrategy Duplicate { get; set; }
 
     /// <summary>
     /// Gets or sets the registration.
@@ -36,5 +45,5 @@ public abstract class RegisterAttribute : Attribute
     /// <value>
     /// The registration.
     /// </value>
-    public RegistrationStrategy Registration { get; set; } = RegistrationStrategy.SelfWithInterfaces;
+    public RegistrationStrategy Registration { get; set; }
 }

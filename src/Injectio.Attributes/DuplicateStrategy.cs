@@ -8,13 +8,13 @@ public enum DuplicateStrategy
     /// <summary>
     /// Skips registrations for services that already exists.
     /// </summary>
-    Skip,
+    Skip = 0,
     /// <summary>
     /// Replaces existing service registrations.
     /// </summary>
-    Replace,
+    Replace = 1,
     /// <summary>
     /// Appends a new registration for existing services.
     /// </summary>
-    Append
+    Append = 2
 }

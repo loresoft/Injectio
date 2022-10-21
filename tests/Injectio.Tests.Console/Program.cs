@@ -12,11 +12,10 @@ var provider = services.BuildServiceProvider();
 var localService = provider.GetRequiredService<ILocalService>();
 var service1 = provider.GetRequiredService<IService1>();
 var multiple2 = provider.GetRequiredService<IEnumerable<IService2>>();
+var implementation = provider.GetRequiredService<ScopedWithInterfacesService2>();
 var factory1 = provider.GetRequiredService<IFactoryService1>();
 
 var module = provider.GetRequiredService<IModuleService>();
-
-Console.ReadLine();
 
 
 public interface ILocalService { }
