@@ -36,5 +36,5 @@ public abstract class RegisterAttribute : Attribute
     /// <value>
     /// The registration.
     /// </value>
-    public RegistrationStrategy Registration { get; set; } = RegistrationStrategy.ImplementedInterfaces;
+    public RegistrationStrategy Registration { get; set; } = RegistrationStrategy.SelfWithInterfaces;
 }

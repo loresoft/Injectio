@@ -1,7 +1,7 @@
-﻿namespace Injectio.Attributes;
+namespace Injectio.Attributes;
 
 /// <summary>
-/// Registgered service type strategies
+/// Register service type strategies
 /// </summary>
 public enum RegistrationStrategy
 {

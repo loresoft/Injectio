@@ -14,7 +14,7 @@ public enum DuplicateStrategy
     /// </summary>
     Replace,
     /// <summary>
-    /// Appends a new registration for existing sevices.
+    /// Appends a new registration for existing services.
     /// </summary>
     Append
 }
