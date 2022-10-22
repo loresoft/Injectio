@@ -1,9 +1,13 @@
 using System.Collections.Immutable;
 using System.Text;
+using System.Text.RegularExpressions;
+
+using Injectio.Generators.Extensions;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
 namespace Injectio.Generators;
@@ -23,19 +27,29 @@ public class ServiceGenerator : IIncrementalGenerator
             transform: static (syntaxContext, _) => (MethodDeclarationSyntax)syntaxContext.Node
         );
 
+        var options = context.AnalyzerConfigOptionsProvider;
+
         var classProviders = classProviderTypes.Collect();
         var methodProviders = methodProviderTypes.Collect();
 
+        IncrementalValueProvider<(Compilation Compilation, AnalyzerConfigOptionsProvider AnalyzerOptions)> compilation
+            = context.CompilationProvider.Combine(context.AnalyzerConfigOptionsProvider);
 
-        IncrementalValueProvider<((ImmutableArray<ClassDeclarationSyntax> ClassDeclarations, ImmutableArray<MethodDeclarationSyntax> MethodDeclarations) Providers, Compilation Compilation)> providers
-            = classProviders.Combine(methodProviders).Combine(context.CompilationProvider);
+        IncrementalValueProvider<(ImmutableArray<ClassDeclarationSyntax> ClassDeclarations, ImmutableArray<MethodDeclarationSyntax> MethodDeclarations)> providers
+            = classProviders.Combine(methodProviders);
+
+        IncrementalValueProvider<(
+            (Compilation Compilation, AnalyzerConfigOptionsProvider AnalyzerOptions) Left,
+            (ImmutableArray<ClassDeclarationSyntax> ClassDeclarations, ImmutableArray<MethodDeclarationSyntax> MethodDeclarations) Right
+        )> outputProvider = compilation.Combine(providers);
 
         context.RegisterSourceOutput(
-            source: providers,
+            source: outputProvider,
             action: static (context, source) => Execute(
-                compilation: source.Compilation,
-                classDeclarations: source.Providers.ClassDeclarations,
-                methodDeclarations: source.Providers.MethodDeclarations,
+                compilation: source.Left.Compilation,
+                analyzerOptions: source.Left.AnalyzerOptions,
+                classDeclarations: source.Right.ClassDeclarations,
+                methodDeclarations: source.Right.MethodDeclarations,
                 sourceContext: context
             )
         );
@@ -43,6 +57,7 @@ public class ServiceGenerator : IIncrementalGenerator
 
     private static void Execute(
         Compilation compilation,
+        AnalyzerConfigOptionsProvider analyzerOptions,
         ImmutableArray<ClassDeclarationSyntax> classDeclarations,
         ImmutableArray<MethodDeclarationSyntax> methodDeclarations,
         SourceProductionContext sourceContext)
@@ -51,8 +66,13 @@ public class ServiceGenerator : IIncrementalGenerator
         var moduleRegistrations = GetModuleRegistrations(compilation, methodDeclarations, sourceContext);
         var serviceRegistrations = GetServiceRegistrations(compilation, classDeclarations, sourceContext);
 
+        // compute extension method name
+        analyzerOptions.GlobalOptions.TryGetValue("build_property.injectioname", out var methodName);
+        if (methodName.IsNullOrWhiteSpace())
+            methodName = Regex.Replace(compilation.AssemblyName, "\\W", "");
+
         // generate registration method
-        string result = CodeGenerator.GenerateExtensionClass(moduleRegistrations, serviceRegistrations, compilation.AssemblyName);
+        string result = CodeGenerator.GenerateExtensionClass(moduleRegistrations, serviceRegistrations, compilation.AssemblyName, methodName);
 
         // add source file
         sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));

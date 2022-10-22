@@ -30,7 +30,7 @@ public class CodeGeneratorTests
             }
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), true);
+        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }
@@ -55,7 +55,7 @@ public class CodeGeneratorTests
             }
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), true);
+        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }
@@ -78,7 +78,7 @@ public class CodeGeneratorTests
             }
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), true);
+        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }
@@ -101,7 +101,7 @@ public class CodeGeneratorTests
             }
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), true);
+        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }

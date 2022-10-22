@@ -14,7 +14,7 @@ Source generator that automatically registers discovered services in the depende
 
 #### Add package
 
-Add the package project to your projects.
+Add the nuget package project to your projects.
 
 `dotnet add package Injectio`
 
@@ -24,20 +24,12 @@ Prevent dependances from including Injectio
 <PackageReference Include="Injectio" PrivateAssets="all" />
 ```
 
-#### Add to container
-
-Call the generated extension method to add to the service container.  The method will be called Add[AssemblyName].  The assemlby name will have the dots removed.
-
-```c#
-var services = new ServiceCollection();
-services.AddInjectioTestsConsole();
-```
 
 ### Attributes
 
-#### Singleton services
-
 Place registration attribute on class.  The class will be discovered and regirsted.
+
+#### Singleton services
 
 ```c#
 [RegisterSingleton]
@@ -79,7 +71,9 @@ public class FactoryService : IService
 }
 ```
 
-#### Modules
+#### Register Method
+
+When the service registration is complex, use the `RegisterServices` attribute on a method that has a parameter of `IServiceCollection` or `ServiceCollection`
 
 ```c#
 public class RegistrationModule
@@ -90,4 +84,26 @@ public class RegistrationModule
         services.TryAddTransient<IModuleService, ModuleService>();
     }
 }
+```
+
+#### Add to container
+
+The source generator creates an extension method with all the discovered services registered.  Call the generated extension method to add the services to the container.  The method will be called `Add[AssemblyName]`.  The assemlby name will have the dots removed.
+
+```c#
+var services = new ServiceCollection();
+services.AddInjectioTestsConsole();
+```
+
+Override the extension method name by using the `InjectioName` MSBuild property.
+
+```xml
+<PropertyGroup>
+  <InjectioName>Library</InjectioName>
+</PropertyGroup>
+```
+
+```c#
+var services = new ServiceCollection();
+services.AddLibrary();
 ```

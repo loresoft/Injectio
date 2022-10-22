@@ -19,4 +19,10 @@
     <PackageReference Include="ThisAssembly" Version="1.0.9" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Injectio.Generators.props">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
