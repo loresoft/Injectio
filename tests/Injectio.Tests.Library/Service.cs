@@ -1,7 +1,7 @@
+using Injectio.Attributes;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
-using Injectio.Attributes;
 
 namespace Injectio.Tests.Library;
 
@@ -57,4 +57,15 @@ public class RegistrationModule
     {
         services.TryAddTransient<IModuleService, ModuleService>();
     }
+}
+
+public interface IOpenGeneric<T>
+{
+
+}
+
+[RegisterSingleton(ImplementationType = typeof(OpenGeneric<>), ServiceType = typeof(IOpenGeneric<>))]
+public class OpenGeneric<T> : IOpenGeneric<T>
+{
+
 }

@@ -17,6 +17,9 @@ var factory1 = provider.GetRequiredService<IFactoryService1>();
 
 var module = provider.GetRequiredService<IModuleService>();
 
+var generic = provider.GetRequiredService<IOpenGeneric<string>>();
+
+Console.WriteLine("Complete");
 
 public interface ILocalService { }
 

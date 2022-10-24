@@ -15,6 +15,13 @@ public abstract class RegisterAttribute : Attribute
         Registration = RegistrationStrategy.SelfWithInterfaces;
     }
 
+
+    /// <summary>
+    /// The <see cref="Type"/> that implements the service.  If not set, the class the interface is on will be used.
+    /// </summary>
+    /// <seealso cref="P:Microsoft.Extensions.DependencyInjection.ServiceDescriptor.ServiceType"/>
+    public Type? ImplementationType { get; set; }
+
     /// <summary>
     /// The <see cref="Type"/> of the service
     /// </summary>

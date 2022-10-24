@@ -134,7 +134,8 @@ public class ServiceGenerator : IIncrementalGenerator
                 if (registration == null)
                     continue; // skip unknown attributes
 
-                registration.ImplementationType = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                if (registration.ImplementationType.IsNullOrWhiteSpace())
+                    registration.ImplementationType = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 // if registration is All Interfaces or null
                 bool includeInterfaces = IncludeInterfaces(registration);
@@ -300,9 +301,7 @@ public class ServiceGenerator : IIncrementalGenerator
         // defaults
         var registration = new ServiceRegistration
         {
-            Lifetime = serviceLifetime,
-            Duplicate = 0, // Skip
-            Registration = 2 // SelfWithInterfaces
+            Lifetime = serviceLifetime
         };
 
         foreach (var parameter in attribute.NamedArguments)
@@ -319,6 +318,9 @@ public class ServiceGenerator : IIncrementalGenerator
                 case "ServiceType":
                     registration.ServiceTypes.Add(value?.ToString());
                     break;
+                case "ImplementationType":
+                    registration.ImplementationType = value?.ToString();
+                    break;
                 case "Factory":
                     registration.Factory = value?.ToString();
                     break;
@@ -329,6 +331,16 @@ public class ServiceGenerator : IIncrementalGenerator
                     registration.Registration = value;
                     break;
             }
+        }
+
+        // set defaults
+        registration.Duplicate ??= 0;
+
+        if (registration.Registration == null
+            && registration.ImplementationType == null
+            && registration.ServiceTypes.Count == 0)
+        {
+            registration.Registration = 2; // SelfWithInterfaces
         }
 
         return registration;
