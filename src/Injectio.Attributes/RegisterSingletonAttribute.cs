@@ -10,6 +10,7 @@ namespace Injectio.Attributes;
 ///   </code>
 /// </example>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
+[System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterSingletonAttribute : RegisterAttribute
 {
 }

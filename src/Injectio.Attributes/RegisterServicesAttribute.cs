@@ -14,6 +14,7 @@ namespace Injectio.Attributes;
 ///   </code>
 /// </example>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+[System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterServicesAttribute : Attribute
 {
 

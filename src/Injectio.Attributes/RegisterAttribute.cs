@@ -4,6 +4,7 @@ namespace Injectio.Attributes;
 /// Attribute to indicate the target class should be register for dependency injection
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
+[System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public abstract class RegisterAttribute : Attribute
 {
     /// <summary>
