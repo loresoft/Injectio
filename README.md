@@ -1,14 +1,14 @@
 # Injectio
 
-Source generator that automatically registers discovered services in the dependency injection container
+Source generator that helps register discovered services in the dependency injection container
 
 ## Features
 
- - Transient, Singleton, Scoped service registration
- - Factory registration
- - Module registration
- - Duplicate Strategy - Skip,Replace,Append
- - Registration Strategy - Self, Implemented Interfaces, Self With Interfaces
+- Transient, Singleton, Scoped service registration
+- Factory registration
+- Module method registration
+- Duplicate Strategy - Skip,Replace,Append
+- Registration Strategy - Self, Implemented Interfaces, Self With Interfaces
 
 ### Usage
 
@@ -24,10 +24,40 @@ Prevent dependances from including Injectio
 <PackageReference Include="Injectio" PrivateAssets="all" />
 ```
 
+### Registration Attributes
 
-### Attributes
+Place registration attribute on class.  The class will be discovered and registered.
 
-Place registration attribute on class.  The class will be discovered and regirsted.
+- `[RegisterSingleton]` Marks the class as a singleton service
+- `[RegisterScoped]` Marks the class as a scoped service
+- `[RegisterTransient]` Marks the class as a transient service
+- `[RegisterServices]` Marks the method to be called to register services
+
+#### Attribute Properties
+
+| Property           | Description                                                                                         |
+|--------------------|-----------------------------------------------------------------------------------------------------|
+| ImplementationType | The type that implements the service.  If not set, the class the interface is on will be used.      |
+| ServiceType        | The type of the service. If not set, the Registration property used to determine what is registered.|
+| Factory            | Name of a factory method to create new instances of the service implementation.                     |
+| Duplicate          | How the generator handles duplicate registrations. See Duplicate Strategy                           |
+| Registration       | How the generator determines what to register. See Registration Strategy                            |
+
+#### Duplicate Strategy
+
+| Value   | Description                                          |
+|---------|------------------------------------------------------|
+| Skip    | Skips registrations for services that already exists |
+| Replace | Replaces existing service registrations              |
+| Append  | Appends a new registration for existing services     |
+
+#### Registration Strategy
+
+| Value                 | Description                                                                           |
+|-----------------------|---------------------------------------------------------------------------------------|
+| Self                  | Registers each matching concrete type as itself                                       |
+| ImplementedInterfaces | Registers each matching concrete type as all of its implemented interfaces            |
+| SelfWithInterfaces    | Registers each matching concrete type as all of its implemented interfaces and itself |
 
 #### Singleton services
 
@@ -52,7 +82,6 @@ public class ScopedService : IService { }
 
 #### Transient Services
 
-
 ```c#
 [RegisterTransient]
 public class TransientService : IService { }
@@ -61,14 +90,28 @@ public class TransientService : IService { }
 #### Factories
 
 ```c#
-[RegisterTransient(ServiceType = typeof(IService), Factory = nameof(ServiceFactory))]
-public class FactoryService : IService
+[RegisterTransient(Factory = nameof(ServiceFactory))]
+public class FactoryService : IFactoryService
 {
-    public static object ServiceFactory(IServiceProvider serviceProvider)
+    private readonly IService _service;
+
+    public FactoryService(IService service)
+    { 
+        _service = service;
+    }
+
+    public static IFactoryService ServiceFactory(IServiceProvider serviceProvider)
     {
-        return new FactoryService1();
+        return new FactoryService(serviceProvider.GetService<IService>());
     }
 }
+```
+
+#### Open Generic
+
+```c#
+[RegisterSingleton(ImplementationType = typeof(OpenGeneric<>), ServiceType = typeof(IOpenGeneric<>))]
+public class OpenGeneric<T> : IOpenGeneric<T> { }
 ```
 
 #### Register Method
@@ -88,7 +131,7 @@ public class RegistrationModule
 
 #### Add to container
 
-The source generator creates an extension method with all the discovered services registered.  Call the generated extension method to add the services to the container.  The method will be called `Add[AssemblyName]`.  The assemlby name will have the dots removed.
+The source generator creates an extension method with all the discovered services registered.  Call the generated extension method to add the services to the container.  The method will be called `Add[AssemblyName]`.  The assembly name will have the dots removed.
 
 ```c#
 var services = new ServiceCollection();
