@@ -37,7 +37,7 @@ Place registration attribute on class.  The class will be discovered and registe
 
 | Property           | Description                                                                                         |
 |--------------------|-----------------------------------------------------------------------------------------------------|
-| ImplementationType | The type that implements the service.  If not set, the class the interface is on will be used.      |
+| ImplementationType | The type that implements the service.  If not set, the class the attribute is on will be used.      |
 | ServiceType        | The type of the service. If not set, the Registration property used to determine what is registered.|
 | Factory            | Name of a factory method to create new instances of the service implementation.                     |
 | Duplicate          | How the generator handles duplicate registrations. See Duplicate Strategy                           |
@@ -131,7 +131,7 @@ public class RegistrationModule
 
 #### Add to container
 
-The source generator creates an extension method with all the discovered services registered.  Call the generated extension method to add the services to the container.  The method will be called `Add[AssemblyName]`.  The assembly name will have the dots removed.
+The source generator creates an extension method with all the discovered services registered.  Call the generated extension method to add the services to the container.  The extension method will be called `Add[AssemblyName]`.  The assembly name will have the dots removed.
 
 ```c#
 var services = new ServiceCollection();
