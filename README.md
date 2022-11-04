@@ -2,7 +2,7 @@
 
 Source generator that helps register discovered services in the dependency injection container
 
-![Source generator](https://raw.githubusercontent.com/loresoft/Injectio/52b94ce860c184a551b854570a0a57b25c9e5c88/media/Injectio.Genertors.png)
+[![Source generator](https://raw.githubusercontent.com/loresoft/Injectio/52b94ce860c184a551b854570a0a57b25c9e5c88/media/Injectio.Genertors.png)](https://github.com/loresoft/Injectio)
 
 ## Features
 
