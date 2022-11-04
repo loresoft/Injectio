@@ -27,8 +27,6 @@ public class ServiceGenerator : IIncrementalGenerator
             transform: static (syntaxContext, _) => (MethodDeclarationSyntax)syntaxContext.Node
         );
 
-        var options = context.AnalyzerConfigOptionsProvider;
-
         var classProviders = classProviderTypes.Collect();
         var methodProviders = methodProviderTypes.Collect();
 

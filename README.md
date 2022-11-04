@@ -2,6 +2,8 @@
 
 Source generator that helps register discovered services in the dependency injection container
 
+![Source generator](https://raw.githubusercontent.com/loresoft/Injectio/master/media/Injectio.Genertors.png)
+
 ## Features
 
 - Transient, Singleton, Scoped service registration
