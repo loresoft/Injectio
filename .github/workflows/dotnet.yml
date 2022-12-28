@@ -2,8 +2,8 @@ name: Build Project
 
 env:
   BUILD_PATH: '${{github.workspace}}/packages'
-  BUILD_VERSION: '1.0.${{github.run_number}}'
-  BUILD_INFORMATION: '1.0.${{github.run_number}}+Branch.${{github.ref_name}}.Sha.${{github.sha}}'
+  BUILD_VERSION: '2.0.${{github.run_number}}'
+  BUILD_INFORMATION: 2.0.${{github.run_number}}+Branch.${{github.ref_name}}.Sha.${{github.sha}}'
 
 on:
   push:

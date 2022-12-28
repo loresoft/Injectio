@@ -1,10 +1,53 @@
 namespace Injectio.Generators;
 
-public class ModuleRegistration
+public sealed class ModuleRegistration : IEquatable<ModuleRegistration>
 {
-    public string MethodName { get; set; }
+    public ModuleRegistration(
+        string className,
+        string methodName,
+        bool isStatic)
+    {
+        ClassName = className;
+        MethodName = methodName;
+        IsStatic = isStatic;
+    }
 
-    public string ClassName { get; set; }
+    public string ClassName { get; }
 
-    public bool IsStatic { get; set; }
+    public string MethodName { get; }
+
+    public bool IsStatic { get; }
+
+    public bool Equals(ModuleRegistration other)
+    {
+        if (ReferenceEquals(null, other))
+            return false;
+        if (ReferenceEquals(this, other))
+            return true;
+
+        return ClassName == other.ClassName
+               && MethodName == other.MethodName
+               && IsStatic == other.IsStatic;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is ModuleRegistration moduleRegistration
+               && Equals(moduleRegistration);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(ClassName, MethodName, IsStatic);
+    }
+
+    public static bool operator ==(ModuleRegistration left, ModuleRegistration right)
+    {
+        return Equals(left, right);
+    }
+
+    public static bool operator !=(ModuleRegistration left, ModuleRegistration right)
+    {
+        return !Equals(left, right);
+    }
 }

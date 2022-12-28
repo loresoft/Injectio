@@ -1,6 +1,6 @@
 # Injectio
 
-Source generator that helps register discovered services in the dependency injection container
+Source generator that helps register attribute marked services in the dependency injection ServiceCollection
 
 [![Source generator](https://raw.githubusercontent.com/loresoft/Injectio/52b94ce860c184a551b854570a0a57b25c9e5c88/media/Injectio.Genertors.png)](https://github.com/loresoft/Injectio)
 
@@ -74,6 +74,14 @@ Explicit service type
 [RegisterSingleton(ServiceType = typeof(IService))]
 public class SingletonService : IService { }
 ```
+
+Support resolving multiple services with `IEnumerable<T>`
+
+```c#
+[RegisterSingleton(Duplicate = DuplicateStrategy.Append)]
+public class SingletonService : IService { }
+```
+
 
 #### Scoped Services
 

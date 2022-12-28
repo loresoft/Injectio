@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+using Injectio.Attributes;
 using Injectio.Generators;
 
 using VerifyXunit;
@@ -19,18 +20,17 @@ public class CodeGeneratorTests
         var modeulRegistrations = new List<ModuleRegistration>();
         var registrations = new List<ServiceRegistration>
         {
-            new ServiceRegistration
-            {
-                ImplementationType = "Injectio.Tests.Service1",
-                Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
-                ServiceTypes = new HashSet<string>
-                {
-                    "Injectio.Tests.IService1"
-                }
-            }
+            new (
+                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+                implementationType: "Injectio.Tests.Service1",
+                serviceTypes: new[] { "Injectio.Tests.IService1" },
+                factory: null,
+                duplicate: DuplicateStrategy.Skip,
+                registration: RegistrationStrategy.SelfWithInterfaces
+            )
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }
@@ -41,21 +41,21 @@ public class CodeGeneratorTests
         var modeulRegistrations = new List<ModuleRegistration>();
         var registrations = new List<ServiceRegistration>
         {
-            new ServiceRegistration
-            {
-                ImplementationType = "Injectio.Tests.ServiceMultiple",
-                Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
-                Registration = "RegistrationStrategy.SelfWithInterfaces",
-                ServiceTypes = new HashSet<string>
-                {
+            new (
+                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+                implementationType: "Injectio.Tests.ServiceMultiple",
+                serviceTypes: new[]                 {
                     "Injectio.Tests.ServiceMultiple",
                     "Injectio.Tests.IService1",
                     "Injectio.Tests.IService2",
-                }
-            }
+                },
+                factory: null,
+                duplicate: DuplicateStrategy.Skip,
+                registration: RegistrationStrategy.SelfWithInterfaces
+            )
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }
@@ -66,19 +66,17 @@ public class CodeGeneratorTests
         var modeulRegistrations = new List<ModuleRegistration>();
         var registrations = new List<ServiceRegistration>
         {
-            new ServiceRegistration
-            {
-                ImplementationType = "Injectio.Tests.Service1",
-                Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped",
-                Duplicate = "DuplicateStrategy.Append",
-                ServiceTypes = new HashSet<string>
-                {
-                    "Injectio.Tests.IService1"
-                }
-            }
+            new (
+                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped",
+                implementationType: "Injectio.Tests.Service1",
+                serviceTypes: new[] { "Injectio.Tests.IService1" },
+                factory: null,
+                duplicate: DuplicateStrategy.Append,
+                registration: RegistrationStrategy.SelfWithInterfaces
+            )
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }
@@ -89,19 +87,17 @@ public class CodeGeneratorTests
         var modeulRegistrations = new List<ModuleRegistration>();
         var registrations = new List<ServiceRegistration>
         {
-            new ServiceRegistration
-            {
-                ImplementationType = "Injectio.Tests.Service1",
-                Lifetime = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient",
-                Duplicate = "DuplicateStrategy.Replace",
-                ServiceTypes = new HashSet<string>
-                {
-                    "Injectio.Tests.IService1"
-                }
-            }
+            new (
+                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient",
+                implementationType: "Injectio.Tests.Service1",
+                serviceTypes: new[] { "Injectio.Tests.IService1" },
+                factory: null,
+                duplicate: DuplicateStrategy.Replace,
+                registration: RegistrationStrategy.SelfWithInterfaces
+            )
         };
 
-        var result = CodeGenerator.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
 
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }

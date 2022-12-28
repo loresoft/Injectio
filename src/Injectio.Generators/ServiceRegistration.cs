@@ -1,16 +1,76 @@
+using Injectio.Attributes;
+
 namespace Injectio.Generators;
 
-public class ServiceRegistration
+public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
 {
-    public string Factory { get; set; }
+    public ServiceRegistration(
+        string lifetime,
+        string implementationType,
+        IEnumerable<string> serviceTypes,
+        string factory,
+        DuplicateStrategy duplicate,
+        RegistrationStrategy registration)
+    {
+        Lifetime = lifetime;
+        ImplementationType = implementationType;
+        ServiceTypes = new EquatableArray<string>(serviceTypes);
+        Factory = factory;
+        Duplicate = duplicate;
+        Registration = registration;
+    }
 
-    public string ImplementationType { get; set; }
+    public string Lifetime { get; }
 
-    public HashSet<string> ServiceTypes { get; set; } = new HashSet<string>();
+    public string ImplementationType { get; }
 
-    public string Lifetime { get; set; } = "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
+    public EquatableArray<string> ServiceTypes { get; }
 
-    public object Duplicate { get; set; }
+    public string Factory { get; }
 
-    public object Registration { get; set; }
+    public DuplicateStrategy Duplicate { get; }
+
+    public RegistrationStrategy Registration { get; }
+
+    public bool Equals(ServiceRegistration other)
+    {
+        if (ReferenceEquals(null, other))
+            return false;
+        if (ReferenceEquals(this, other))
+            return true;
+
+        return Lifetime == other.Lifetime
+               && ImplementationType == other.ImplementationType
+               && ServiceTypes.Equals(other.ServiceTypes)
+               && Factory == other.Factory
+               && Duplicate == other.Duplicate
+               && Registration == other.Registration;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is ServiceRegistration serviceRegistration
+               && Equals(serviceRegistration);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(
+            Lifetime,
+            ImplementationType,
+            ServiceTypes,
+            Factory,
+            Duplicate,
+            Registration);
+    }
+
+    public static bool operator ==(ServiceRegistration left, ServiceRegistration right)
+    {
+        return Equals(left, right);
+    }
+
+    public static bool operator !=(ServiceRegistration left, ServiceRegistration right)
+    {
+        return !Equals(left, right);
+    }
 }

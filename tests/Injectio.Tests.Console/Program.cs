@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
 services.AddInjectioTestsLibrary();
-services.AddInjectioTestsConsole();
+services.AddConsoleLibrary();
 
 var provider = services.BuildServiceProvider();
 
@@ -26,4 +26,5 @@ public interface ILocalService { }
 
 [RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces, Duplicate = DuplicateStrategy.Replace)]
 public class LocalService : ILocalService { }
+
 
