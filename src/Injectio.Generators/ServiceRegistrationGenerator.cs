@@ -213,10 +213,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private static ServiceRegistration CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
     {
-        var attributeName = attribute.AttributeClass?.ToString();
-
         // check for known attribute
-        if (!IsKnownAttribute(attributeName, out var serviceLifetime))
+        if (!IsKnownAttribute(attribute, out var serviceLifetime))
             return null;
 
         // defaults
@@ -297,36 +295,82 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     {
         return value switch
         {
-            int numberValue => Enum.IsDefined(typeof(TEnum), value) ? (TEnum)value : null,
+            int numberValue => Enum.IsDefined(typeof(TEnum), numberValue) ? (TEnum)Enum.ToObject(typeof(TEnum), numberValue) : null,
             string stringValue => Enum.TryParse<TEnum>(stringValue, out var strategy) ? strategy : null,
             _ => null
         };
     }
 
-    private static bool IsKnownAttribute(string attributeName, out string serviceLifetime)
+    private static bool IsKnownAttribute(AttributeData attribute, out string serviceLifetime)
     {
-        serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
-
-        switch (attributeName)
+        if (IsSingletonAttribute(attribute))
         {
-            case KnownTypes.TransientAttributeShortName:
-            case KnownTypes.TransientAttributeTypeName:
-            case KnownTypes.TransientAttributeFullName:
-                serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
-                return true;
-            case KnownTypes.SingletonAttributeShortName:
-            case KnownTypes.SingletonAttributeTypeName:
-            case KnownTypes.SingletonAttributeFullName:
-                serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton";
-                return true;
-            case KnownTypes.ScopedAttributeShortName:
-            case KnownTypes.ScopedAttributeTypeName:
-            case KnownTypes.ScopedAttributeFullName:
-                serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped";
-                return true;
+            serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton";
+            return true;
         }
 
+        if (IsScopedAttribute(attribute))
+        {
+            serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped";
+            return true;
+        }
+
+        if (IsTransientAttribute(attribute))
+        {
+            serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
+            return true;
+        }
+
+        serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
         return false;
+    }
+
+    private static bool IsTransientAttribute(AttributeData attribute)
+    {
+        return attribute?.AttributeClass is
+        {
+            Name: KnownTypes.TransientAttributeShortName or KnownTypes.TransientAttributeTypeName,
+            ContainingNamespace:
+            {
+                Name: "Attributes",
+                ContainingNamespace:
+                {
+                    Name: "Injectio"
+                }
+            }
+        };
+    }
+
+    private static bool IsSingletonAttribute(AttributeData attribute)
+    {
+        return attribute?.AttributeClass is
+        {
+            Name: KnownTypes.SingletonAttributeShortName or KnownTypes.SingletonAttributeTypeName,
+            ContainingNamespace:
+            {
+                Name: "Attributes",
+                ContainingNamespace:
+                {
+                    Name: "Injectio"
+                }
+            }
+        };
+    }
+
+    private static bool IsScopedAttribute(AttributeData attribute)
+    {
+        return attribute?.AttributeClass is
+        {
+            Name: KnownTypes.ScopedAttributeShortName or KnownTypes.ScopedAttributeTypeName,
+            ContainingNamespace:
+            {
+                Name: "Attributes",
+                ContainingNamespace:
+                {
+                    Name: "Injectio"
+                }
+            }
+        };
     }
 
     private static bool IsMethodAttribute(AttributeData attribute)
