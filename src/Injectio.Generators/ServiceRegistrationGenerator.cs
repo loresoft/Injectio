@@ -253,9 +253,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             }
         }
 
-        // set defaults
+        // default to ignore duplicate service registrations
         duplicateStrategy ??= DuplicateStrategy.Skip;
 
+        // if implementation and service types not set, default to self with interfaces
         if (registrationStrategy == null
             && implementationType == null
             && serviceTypes.Count == 0)
@@ -263,11 +264,13 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             registrationStrategy = RegistrationStrategy.SelfWithInterfaces;
         }
 
+        // no implementation type set, use class attribute is on
         if (implementationType.IsNullOrWhiteSpace())
         {
             implementationType = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
+        // add implemented interfaces
         bool includeInterfaces = registrationStrategy is RegistrationStrategy.ImplementedInterfaces or RegistrationStrategy.SelfWithInterfaces;
         if (includeInterfaces)
         {
@@ -278,6 +281,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             }
         }
 
+        // add class attribute is on; default service type if not set
         bool includeSelf = registrationStrategy is RegistrationStrategy.Self or RegistrationStrategy.SelfWithInterfaces;
         if (includeSelf || serviceTypes.Count == 0)
             serviceTypes.Add(implementationType);
