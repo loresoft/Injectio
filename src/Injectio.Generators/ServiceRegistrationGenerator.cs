@@ -224,6 +224,27 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         DuplicateStrategy? duplicateStrategy = null;
         RegistrationStrategy? registrationStrategy = null;
 
+        var attributeClass = attribute.AttributeClass;
+        if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
+        {
+            // if generic attribute, get service and implementation from generic type parameters
+            for (var index = 0; index < attributeClass.TypeParameters.Length; index++)
+            {
+                var typeParameter = attributeClass.TypeParameters[index];
+                var typeArgument = attributeClass.TypeArguments[index];
+
+                if (typeParameter.Name == "TService")
+                {
+                    var service = typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    serviceTypes.Add(service);
+                }
+                else if (typeParameter.Name == "TImplementation")
+                {
+                    implementationType = typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                }
+            }
+        }
+
         foreach (var parameter in attribute.NamedArguments)
         {
             // match name with service registration configuration

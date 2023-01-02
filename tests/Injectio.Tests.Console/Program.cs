@@ -23,8 +23,16 @@ Console.WriteLine("Complete");
 
 public interface ILocalService { }
 
-
 [RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces, Duplicate = DuplicateStrategy.Replace)]
 public class LocalService : ILocalService { }
 
+public interface ILocalAttributeService { }
 
+[RegisterSingleton<ILocalAttributeService>]
+public class LocalAttributeService : ILocalService, IService1 { }
+
+
+public interface ILocalAttributeNameService { }
+
+[RegisterSingleton<ILocalAttributeNameService, LocalAttributeNameService>]
+public class LocalAttributeNameService : ILocalAttributeNameService, ILocalAttributeService { }
