@@ -1,66 +1,50 @@
 namespace Injectio.Attributes;
 
 /// <summary>
-/// Attribute to indicate the target class should be register for dependency injection as a transient service
+/// Attribute to indicate the target class should be registered for dependency injection as a transient service.
 /// </summary>
-/// <example>Register the class as an implementation for IService
-///   <code>
-///   [RegisterTransient]
-///   public class TransientService : IService { }
-///   </code>
+/// <example>
+/// Register the class as an implementation for IService
+/// <code>
+/// [RegisterTransient(typeof(IService))]
+/// public class TransientService : IService { }
+/// </code>
 /// </example>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+[AttributeUsage(attributeTargets.Class, AllowMultiple = true)]
 [System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterTransientAttribute : RegisterAttribute
 {
-}
+    /// <summary>
+    /// The type of the service to add.
+    /// </summary>
+    public Type ServiceType { get; set; }
+    /// <summary>
+    /// The type of the implementation to use.
+    /// </summary>
+    public Type ImplementationType { get; set; }
 
-#if NET7_0_OR_GREATER
-/// <summary>
-/// Attribute to indicate the target class should be register for dependency injection as a transient service
-/// </summary>
-/// <typeparam name="TService">The type of the service to add.</typeparam>
-/// <example>Register the class as an implementation for IService
-///   <code>
-///   [RegisterTransient&lt;IService&gt;]
-///   public class TransientService : IService { }
-///   </code>
-/// </example>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-[System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
-public class RegisterTransientAttribute<TService> : RegisterTransientAttribute
-{
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterTransientAttribute"/> class.
     /// </summary>
-    public RegisterTransientAttribute()
-    {
-        ServiceType = typeof(TService);
-    }
-}
+    public RegisterTransientAttribute() { }
 
-/// <summary>
-/// Attribute to indicate the target class should be register for dependency injection as a transient service
-/// </summary>
-/// <typeparam name="TService">The type of the service to add.</typeparam>
-/// <typeparam name="TImplementation">The type of the implementation to use.</typeparam>
-/// <example>Register the TransientService class as an implementation for IService
-///   <code>
-///   [RegisterTransient&lt;IService, TransientService&gt;]
-///   public class TransientService: IService { }
-///   </code>
-/// </example>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-[System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
-public class RegisterTransientAttribute<TService, TImplementation> : RegisterTransientAttribute<TService>
-{
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterTransientAttribute"/> class.
     /// </summary>
-    public RegisterTransientAttribute()
+    /// <param name="serviceType">The type of the service to add.</param>
+    public RegisterTransientAttribute(Type serviceType)
     {
-        ServiceType = typeof(TService);
-        ImplementationType = typeof(TImplementation);
+        ServiceType = serviceType;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RegisterTransientAttribute"/> class.
+    /// </summary>
+    /// <param name="serviceType">The type of the service to add.</param>
+    /// <param name="implementationType">The type of the implementation to use.</param>
+    public RegisterTransientAttribute(Type serviceType, Type implementationType)
+    {
+        ServiceType = serviceType;
+        ImplementationType = implementationType;
     }
 }
-#endif
