@@ -4,7 +4,7 @@ using Injectio.Tests.Library;
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
-services.AddInjectioTestsLibrary();
+services.AddInjectioTestsLibrary("Client", "Server");
 services.AddConsoleLibrary();
 
 var provider = services.BuildServiceProvider();
@@ -18,6 +18,7 @@ var factory1 = provider.GetRequiredService<IFactoryService1>();
 var module = provider.GetRequiredService<IModuleService>();
 
 var generic = provider.GetRequiredService<IOpenGeneric<string>>();
+var tagService = provider.GetService<IServiceTag>();
 
 Console.WriteLine("Complete");
 

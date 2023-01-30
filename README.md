@@ -179,3 +179,27 @@ Override the extension method name by using the `InjectioName` MSBuild property.
 var services = new ServiceCollection();
 services.AddLibrary();
 ```
+
+#### Registration Tags
+
+Control what is registered when calling the generated extension method using Tags
+
+Tag the service
+
+```c#
+public interface IServiceTag
+{
+}
+
+[RegisterSingleton(Tags = "Client,FrontEnd")]
+public class ServiceTag : IServiceTag
+{
+}
+```
+
+Specify tags when adding to service collection.  Note, if no tags specified, all services are registered
+
+```c#
+var services = new ServiceCollection();
+services.AddInjectioTestsLibrary("Client");
+```

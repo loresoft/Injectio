@@ -2,8 +2,8 @@ name: Build Project
 
 env:
   BUILD_PATH: '${{github.workspace}}/packages'
-  BUILD_VERSION: '2.0.${{github.run_number}}'
-  BUILD_INFORMATION: 2.0.${{github.run_number}}+Branch.${{github.ref_name}}.Sha.${{github.sha}}'
+  BUILD_VERSION: '2.5.${{github.run_number}}'
+  BUILD_INFORMATION: 2.5.${{github.run_number}}+Branch.${{github.ref_name}}.Sha.${{github.sha}}'
 
 on:
   push:
@@ -25,21 +25,21 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 7.0.x
-        
+
     - name: Restore dependencies
       run: dotnet restore
-      
+
     - name: Build Project
       run: 'dotnet build --no-restore --configuration Release -p:Version="${{env.BUILD_VERSION}}" -p:InformationalVersion="${{env.BUILD_INFORMATION}}"'
 
     - name: Run Test
       run: dotnet test --no-build --configuration Release --verbosity normal
-      
+
     - name: Create Packages
       run: 'nuget pack Injectio.nuspec -Version "${{env.BUILD_VERSION}}" -OutputDirectory "${{env.BUILD_PATH}}" -p Configuration=Release'
 

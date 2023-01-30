@@ -54,4 +54,12 @@ public abstract class RegisterAttribute : Attribute
     /// The registration.
     /// </value>
     public RegistrationStrategy Registration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the comma delimited list of service registration tags.
+    /// </summary>
+    /// <value>
+    /// The comma delimited list of service registration tags.
+    /// </value>
+    public string? Tags { get; set; }
 }

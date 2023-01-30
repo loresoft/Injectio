@@ -5,28 +5,37 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Injectio.Tests.Library;
 
+public interface IService1
+{
+}
 
-public interface IService1 { }
+public interface IService2
+{
+}
 
-public interface IService2 { }
-
-public interface IService3 { }
-
+public interface IService3
+{
+}
 
 [RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces)]
-public class SingletonService3 : IService3 { }
-
+public class SingletonService3 : IService3
+{
+}
 
 [RegisterScoped(Duplicate = DuplicateStrategy.Append)]
-public class ScopedWithInterfacesService2 : IService2 { }
-
+public class ScopedWithInterfacesService2 : IService2
+{
+}
 
 [RegisterScoped(ServiceType = typeof(IService1))]
 [RegisterScoped(ServiceType = typeof(IService2), Duplicate = DuplicateStrategy.Append)]
-public class ServiceMultiple : IService1, IService2 { }
+public class ServiceMultiple : IService1, IService2
+{
+}
 
-public interface IFactoryService1 { }
-
+public interface IFactoryService1
+{
+}
 
 [RegisterTransient(ServiceType = typeof(IFactoryService1), Factory = nameof(ServiceFactory))]
 public class FactoryService1 : IFactoryService1
@@ -44,14 +53,16 @@ public class FactoryService1 : IFactoryService1
     }
 }
 
-public interface IModuleService { }
+public interface IModuleService
+{
+}
 
-public class ModuleService : IModuleService { }
-
+public class ModuleService : IModuleService
+{
+}
 
 public class RegistrationModule
 {
-
     [RegisterServices]
     public void Register(IServiceCollection services)
     {
@@ -61,11 +72,18 @@ public class RegistrationModule
 
 public interface IOpenGeneric<T>
 {
-
 }
 
 [RegisterSingleton(ImplementationType = typeof(OpenGeneric<>), ServiceType = typeof(IOpenGeneric<>))]
 public class OpenGeneric<T> : IOpenGeneric<T>
 {
+}
 
+public interface IServiceTag
+{
+}
+
+[RegisterSingleton(Tags = "Client,FrontEnd")]
+public class ServiceTag : IServiceTag
+{
 }

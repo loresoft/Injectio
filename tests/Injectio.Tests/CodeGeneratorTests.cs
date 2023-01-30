@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Injectio.Attributes;
@@ -26,7 +27,8 @@ public class CodeGeneratorTests
                 serviceTypes: new[] { "Injectio.Tests.IService1" },
                 factory: null,
                 duplicate: DuplicateStrategy.Skip,
-                registration: RegistrationStrategy.SelfWithInterfaces
+                registration: RegistrationStrategy.SelfWithInterfaces,
+                tags: Enumerable.Empty<string>()
             )
         };
 
@@ -51,7 +53,8 @@ public class CodeGeneratorTests
                 },
                 factory: null,
                 duplicate: DuplicateStrategy.Skip,
-                registration: RegistrationStrategy.SelfWithInterfaces
+                registration: RegistrationStrategy.SelfWithInterfaces,
+                tags: Enumerable.Empty<string>()
             )
         };
 
@@ -72,7 +75,8 @@ public class CodeGeneratorTests
                 serviceTypes: new[] { "Injectio.Tests.IService1" },
                 factory: null,
                 duplicate: DuplicateStrategy.Append,
-                registration: RegistrationStrategy.SelfWithInterfaces
+                registration: RegistrationStrategy.SelfWithInterfaces,
+                tags: Enumerable.Empty<string>()
             )
         };
 
@@ -93,7 +97,8 @@ public class CodeGeneratorTests
                 serviceTypes: new[] { "Injectio.Tests.IService1" },
                 factory: null,
                 duplicate: DuplicateStrategy.Replace,
-                registration: RegistrationStrategy.SelfWithInterfaces
+                registration: RegistrationStrategy.SelfWithInterfaces,
+                tags: Enumerable.Empty<string>()
             )
         };
 
@@ -102,6 +107,27 @@ public class CodeGeneratorTests
         return Verifier.Verify(result).UseDirectory("Snapshots");
     }
 
+    [Fact]
+    public Task GenerateExtensionClassSingletonTags()
+    {
+        var modeulRegistrations = new List<ModuleRegistration>();
+        var registrations = new List<ServiceRegistration>
+        {
+            new (
+                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+                implementationType: "Injectio.Tests.Service1",
+                serviceTypes: new[] { "Injectio.Tests.IService1" },
+                factory: null,
+                duplicate: DuplicateStrategy.Skip,
+                registration: RegistrationStrategy.SelfWithInterfaces,
+                tags: new[] { "Test", "Big" }
+            )
+        };
+
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+
+        return Verifier.Verify(result).UseDirectory("Snapshots");
+    }
 }
 
 public interface IService1 { }
@@ -113,3 +139,4 @@ public class Service1 : IService1 { }
 public class Service2 : IService2 { }
 
 public class ServiceMultiple : IService1, IService2 { }
+
