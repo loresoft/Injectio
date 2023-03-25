@@ -18,7 +18,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns>The service collection</returns>
         public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddCodeGeneratorTests(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, params string[]? tags)
         {
-            var tagSet = new HashSet<string>(tags ?? Enumerable.Empty<string>());
+            var tagSet = new global::System.Collections.Generic.HashSet<string>(tags ?? global::System.Linq.Enumerable.Empty<string>());
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.Add(
                 serviceCollection,
