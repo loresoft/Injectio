@@ -68,7 +68,7 @@ public static class ServiceRegistrationWriter
 
 
         codeBuilder
-            .AppendLine("var tagSet = new HashSet<string>(tags ?? Enumerable.Empty<string>());")
+            .AppendLine("var tagSet = new global::System.Collections.Generic.HashSet<string>(tags ?? global::System.Linq.Enumerable.Empty<string>());")
             .AppendLine();
 
         var moduleCount = 1;
