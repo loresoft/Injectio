@@ -2,7 +2,7 @@
 
 Source generator that helps register attribute marked services in the dependency injection ServiceCollection
 
-[![Source generator](https://github.com/loresoft/Injectio/raw/main/media/Injectio.Genertors.png)](https://github.com/loresoft/Injectio)
+[![Source generator](https://raw.githubusercontent.com/loresoft/Injectio/main/media/Injectio.Genertors.png)](https://github.com/loresoft/Injectio)
 
 ## Features
 
