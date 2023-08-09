@@ -41,9 +41,9 @@ public static class ServiceRegistrationWriter
         {
             codeBuilder
                 .Append("[global::System.CodeDom.Compiler.GeneratedCode(\"")
-                .Append(ThisAssembly.Project.AssemblyName)
+                .Append("Injectio.Generators")
                 .Append("\", \"")
-                .Append(ThisAssembly.Info.Version)
+                .Append("1.0.0.0")
                 .AppendLine("\")]");
         }
 
