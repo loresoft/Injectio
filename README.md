@@ -153,7 +153,13 @@ public class RegistrationModule
     [RegisterServices]
     public static void Register(IServiceCollection services)
     {
-        services.TryAddTransient<IModuleService, ModuleService>();
+        // add configuration options
+        services
+            .AddOptions<PollingOption>()
+            .Configure<IConfiguration>((settings, configuration) => configuration
+                .GetSection(PollingOption.SectionName)
+                .Bind(settings)
+            );
     }
 }
 ```
