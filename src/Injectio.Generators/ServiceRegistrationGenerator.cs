@@ -122,7 +122,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (!isKnown)
             return null;
 
-        var diagnostics = ValidateMethod(methodDeclaration, methodSymbol).ToArray();
+        var (diagnostics, hasServiceCollection, hasTagCollection) = ValidateMethod(methodDeclaration, methodSymbol);
         if (diagnostics.Any())
             return new ServiceRegistrationContext(diagnostics);
 
@@ -130,7 +130,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         (
             className: methodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             methodName: methodSymbol.Name,
-            isStatic: methodSymbol.IsStatic
+            isStatic: methodSymbol.IsStatic,
+            hasTagCollection: hasTagCollection
         );
 
         return new ServiceRegistrationContext(moduleRegistrations: new[] { registration });
@@ -159,56 +160,60 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return new ServiceRegistrationContext(serviceRegistrations: registrations);
     }
 
-    private static IEnumerable<Diagnostic> ValidateMethod(MethodDeclarationSyntax methodDeclaration, IMethodSymbol methodSymbol)
+    private static (IReadOnlyCollection<Diagnostic> diagnostics, bool hasServiceCollection, bool hasTagCollection) ValidateMethod(MethodDeclarationSyntax methodDeclaration, IMethodSymbol methodSymbol)
     {
+        var diagnostics = new List<Diagnostic>();
         var hasServiceCollection = false;
+        var hasTagCollection = false;
+
         var methodName = methodSymbol.Name;
 
-        foreach (var parameterSymbol in methodSymbol.Parameters)
+        // validate first parameter should be service collection
+        if (methodSymbol.Parameters.Length is 1 or 2)
         {
-            bool isServiceCollection = IsServiceCollection(parameterSymbol);
-
-            if (isServiceCollection)
+            var parameterSymbol = methodSymbol.Parameters[0];
+            hasServiceCollection = IsServiceCollection(parameterSymbol);
+            if (!hasServiceCollection)
             {
-                hasServiceCollection = true;
-                continue;
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.InvalidModuleParameter,
+                    methodDeclaration.GetLocation(),
+                    parameterSymbol.Name,
+                    methodName
+                );
+                diagnostics.Add(diagnostic);
             }
-
-            var parameterDiagnostic = Diagnostic.Create(
-                new DiagnosticDescriptor(
-                    id: "SD0010",
-                    title: "Invalid Module Parameter",
-                    messageFormat: "Invalid parameter {0} for registration method {1}.  Module registration will be skipped.",
-                    category: "Usage",
-                    defaultSeverity: DiagnosticSeverity.Warning,
-                    isEnabledByDefault: true
-                ),
-                methodDeclaration.GetLocation(),
-                parameterSymbol.Name,
-                methodName
-            );
-
-            yield return parameterDiagnostic;
         }
 
-        if (hasServiceCollection)
-            yield break;
+        // validate second parameter should be string collection
+        if (methodSymbol.Parameters.Length is 2)
+        {
+            var parameterSymbol = methodSymbol.Parameters[1];
+            hasTagCollection = IsStringCollection(parameterSymbol);
+            if (!hasTagCollection)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.InvalidModuleParameter,
+                    methodDeclaration.GetLocation(),
+                    parameterSymbol.Name,
+                    methodName
+                );
+                diagnostics.Add(diagnostic);
+            }
+        }
 
-        // no parameter for service collection
-        var diagnostic = Diagnostic.Create(
-            new DiagnosticDescriptor(
-                id: "SD0011",
-                title: "Invalid Module Parameter",
-                messageFormat: "A parameter of type IServiceCollection was not found for method {0}. Module registration will be skipped.",
-                category: "Usage",
-                defaultSeverity: DiagnosticSeverity.Warning,
-                isEnabledByDefault: true
-            ),
+        if (methodSymbol.Parameters.Length is 1 or 2)
+            return (diagnostics, hasServiceCollection, hasTagCollection);
+
+        // invalid parameter count
+        var parameterDiagnostic = Diagnostic.Create(
+            DiagnosticDescriptors.InvalidServiceCollectionParameter,
             methodDeclaration.GetLocation(),
             methodName
         );
+        diagnostics.Add(parameterDiagnostic);
 
-        yield return diagnostic;
+        return (diagnostics, hasServiceCollection, hasTagCollection);
     }
 
     private static ServiceRegistration CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
@@ -440,6 +445,31 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     ContainingNamespace:
                     {
                         Name: "Microsoft"
+                    }
+                }
+            }
+        };
+    }
+
+    private static bool IsStringCollection(IParameterSymbol parameterSymbol)
+    {
+        var type = parameterSymbol?.Type as INamedTypeSymbol;
+
+        return type is
+        {
+            Name: "IEnumerable" or "IReadOnlySet" or "IReadOnlyCollection" or "ICollection" or "ISet" or "HashSet",
+            IsGenericType: true,
+            TypeArguments.Length: 1,
+            TypeParameters.Length: 1,
+            ContainingNamespace:
+            {
+                Name: "Generic",
+                ContainingNamespace:
+                {
+                    Name: "Collections",
+                    ContainingNamespace:
+                    {
+                        Name: "System"
                     }
                 }
             }

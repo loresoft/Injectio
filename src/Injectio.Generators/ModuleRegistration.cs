@@ -5,11 +5,13 @@ public sealed class ModuleRegistration : IEquatable<ModuleRegistration>
     public ModuleRegistration(
         string className,
         string methodName,
-        bool isStatic)
+        bool isStatic,
+        bool hasTagCollection)
     {
         ClassName = className;
         MethodName = methodName;
         IsStatic = isStatic;
+        HasTagCollection = hasTagCollection;
     }
 
     public string ClassName { get; }
@@ -17,6 +19,8 @@ public sealed class ModuleRegistration : IEquatable<ModuleRegistration>
     public string MethodName { get; }
 
     public bool IsStatic { get; }
+
+    public bool HasTagCollection { get; }
 
     public bool Equals(ModuleRegistration other)
     {

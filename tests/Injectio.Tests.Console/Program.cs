@@ -37,3 +37,58 @@ public interface ILocalAttributeNameService { }
 
 [RegisterSingleton<ILocalAttributeNameService, LocalAttributeNameService>]
 public class LocalAttributeNameService : ILocalAttributeNameService, ILocalAttributeService { }
+
+public static class ServiceRegistration
+{
+    [RegisterServices]
+    public static void RegisterWithTagsSet(IServiceCollection services, ISet<string> tags)
+    {
+
+    }
+
+    [RegisterServices]
+    public static void RegisterWithTagsReadOnly(IServiceCollection services, IReadOnlySet<string> tags)
+    {
+
+    }
+
+    [RegisterServices]
+    public static void RegisterWithTagsCollection(IServiceCollection services, ICollection<string> tags)
+    {
+
+    }
+
+    [RegisterServices]
+    public static void RegisterServices(IServiceCollection services)
+    {
+
+    }
+
+}
+
+public class ServiceRegistrationInstance
+{
+    [RegisterServices]
+    public void RegisterWithTagsSet(IServiceCollection services, ISet<string> tags)
+    {
+
+    }
+
+    [RegisterServices]
+    public void RegisterWithTagsReadOnly(IServiceCollection services, IReadOnlySet<string> tags)
+    {
+
+    }
+
+    [RegisterServices]
+    public void RegisterWithTagsCollection(IServiceCollection services, ICollection<string> tags)
+    {
+
+    }
+
+    [RegisterServices]
+    public void RegisterServices(IServiceCollection services)
+    {
+
+    }
+}

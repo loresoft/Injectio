@@ -107,7 +107,11 @@ public static class ServiceRegistrationWriter
                 .Append(moduleRegistration.ClassName)
                 .Append('.')
                 .Append(moduleRegistration.MethodName)
-                .AppendLine("(serviceCollection);")
+                .Append("(")
+                .Append("serviceCollection")
+                .AppendIf(", tagSet", moduleRegistration.HasTagCollection)
+                .Append(");")
+                .AppendLine()
                 .AppendLine();
         }
         else
@@ -125,7 +129,11 @@ public static class ServiceRegistrationWriter
                 .Append($"{moduleCount:0000}")
                 .Append('.')
                 .Append(moduleRegistration.MethodName)
-                .AppendLine("(serviceCollection);")
+                .Append("(")
+                .Append("serviceCollection")
+                .AppendIf(", tagSet", moduleRegistration.HasTagCollection)
+                .Append(");")
+                .AppendLine()
                 .AppendLine();
 
             moduleCount++;
