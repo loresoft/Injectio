@@ -203,6 +203,19 @@ public class ServiceTag : IServiceTag
 }
 ```
 
+Tags can be passed to register methods
+
+```c#
+public static class ServiceRegistration
+{
+    [RegisterServices]
+    public static void Register(IServiceCollection services, ISet<string> tags)
+    {
+
+    }
+}
+```
+
 Specify tags when adding to service collection.  Note, if no tags specified, all services are registered
 
 ```c#
