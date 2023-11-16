@@ -117,9 +117,16 @@ public class FactoryService : IFactoryService
 }
 ```
 
+#### Open Generic
+
+```c#
+[RegisterSingleton(ImplementationType = typeof(OpenGeneric<>), ServiceType = typeof(IOpenGeneric<>))]
+public class OpenGeneric<T> : IOpenGeneric<T> { }
+```
+
 #### Generic Attributes
 
-You can use generic attributes to register services if your project targets net7.0.
+You can use generic attributes to register services if your project targets .NET 7.0+
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
@@ -136,11 +143,64 @@ Generic attributes allow declaration to be more compact by avoiding the typeof c
 public class ServiceImplementation : IService { }
 ```
 
-#### Open Generic
+#### Keyed Services
+
+You can register keyed services if your project targets .NET 8.0+
+
+Register a keyed service
 
 ```c#
-[RegisterSingleton(ImplementationType = typeof(OpenGeneric<>), ServiceType = typeof(IOpenGeneric<>))]
-public class OpenGeneric<T> : IOpenGeneric<T> { }
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Alpha")]
+public class ServiceAlphaKeyed : IServiceKeyed
+{
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Beta")]
+public class ServiceBetaKeyed : IServiceKeyed
+{
+}
+```
+
+Register using an enum
+
+```c#
+public enum ServiceType
+{
+    Alpha,
+    Beta
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = ServiceType.Alpha)]
+public class ServiceAlphaTypeKeyed : IServiceKeyed
+{
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = ServiceType.Beta)]
+public class ServiceBetaTypeKeyed : IServiceKeyed
+{
+}
+```
+
+Register using an factory method
+
+```c#
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Charlie", Factory = nameof(ServiceFactory))]
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Delta", Factory = nameof(ServiceFactory))]
+public class ServiceFactoryKeyed : IServiceKeyed
+{
+    public ServiceFactoryKeyed(object? serviceKey)
+    {
+        ServiceKey = serviceKey;
+    }
+
+    public object? ServiceKey { get; }
+
+    public static IServiceKeyed ServiceFactory(IServiceProvider serviceProvider, object? serviceKey)
+    {
+        return new ServiceFactoryKeyed(serviceKey);
+    }
+
+}
 ```
 
 #### Register Method
