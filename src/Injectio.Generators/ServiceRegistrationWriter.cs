@@ -203,7 +203,7 @@ public static class ServiceRegistrationWriter
             .IncrementIndent()
             .AppendLine("serviceCollection,")
             .Append("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.")
-            .Append(serviceRegistration.ServiceKey != null ? "DescribeKeyed" : "Describe")
+            .Append(serviceRegistration.ServiceKey.HasValue()  ? "DescribeKeyed" : "Describe")
             .AppendLine("(")
             .IncrementIndent()
             .Append("typeof(")
@@ -211,7 +211,7 @@ public static class ServiceRegistrationWriter
             .Append(serviceType)
             .AppendLine("),");
 
-        if (serviceRegistration.ServiceKey != null)
+        if (serviceRegistration.ServiceKey.HasValue())
         {
             codeBuilder
                 .Append(serviceRegistration.ServiceKey)
