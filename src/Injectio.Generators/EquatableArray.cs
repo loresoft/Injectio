@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace Injectio.Generators;
 
-public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnumerable<T>
+public readonly struct EquatableArray<T> : IReadOnlyCollection<T>, IEquatable<EquatableArray<T>>
     where T : IEquatable<T>
 {
     public static readonly EquatableArray<T> Empty = new(Array.Empty<T>());
@@ -27,7 +27,7 @@ public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnume
 
     public override bool Equals(object obj)
     {
-        return obj is EquatableArray<T> array && Equals(array);
+        return obj is EquatableArray<T> array && Equals(this, array);
     }
 
     public override int GetHashCode()
@@ -35,12 +35,7 @@ public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnume
         if (_array is null)
             return 0;
 
-        HashCode hashCode = default;
-
-        foreach (T item in _array)
-            hashCode.Add(item);
-
-        return hashCode.ToHashCode();
+        return HashCode.Seed.CombineAll(_array);
     }
 
     public ReadOnlySpan<T> AsSpan()

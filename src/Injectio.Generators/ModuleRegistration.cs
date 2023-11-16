@@ -42,7 +42,10 @@ public sealed class ModuleRegistration : IEquatable<ModuleRegistration>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(ClassName, MethodName, IsStatic);
+        return HashCode.Seed
+            .Combine(ClassName)
+            .Combine(MethodName)
+            .Combine(IsStatic);
     }
 
     public static bool operator ==(ModuleRegistration left, ModuleRegistration right)

@@ -34,6 +34,23 @@ public class IndentedStringBuilder
     }
 
     /// <summary>
+    /// Appends the current indent and then the given string to the string being built.
+    /// </summary>
+    /// <param name="value">The value to append.</param>
+    /// <returns>This builder so that additional calls can be chained.</returns>
+    public virtual IndentedStringBuilder Append<T>(T value)
+    {
+        if (value == null)
+            return this;
+
+        DoIndent();
+
+        _stringBuilder.Append(value.ToString());
+
+        return this;
+    }
+
+    /// <summary>
     /// Appends the current indent and then the given char to the string being built.
     /// </summary>
     /// <param name="value">The char to append.</param>
@@ -73,6 +90,66 @@ public class IndentedStringBuilder
 
         foreach (var chr in value)
             _stringBuilder.Append(chr);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Appends the current indent and then the given strings to the string being built.
+    /// </summary>
+    /// <typeparam name="T">The type of the members of values.</typeparam>
+    /// <param name="separator">The string to use as a separator. separator is included in the concatenated and appended strings only if values has more than one element.</param>
+    /// <param name="values">A collection that contains the objects to concatenate and append to the current instance of the string builder.</param>
+    /// <returns>This builder so that additional calls can be chained.</returns>
+    public virtual IndentedStringBuilder AppendJoin<T>(IEnumerable<T> values, string separator)
+    {
+        if (values is null)
+            throw new ArgumentNullException(nameof(values));
+
+        separator ??= string.Empty;
+
+        DoIndent();
+
+        var wroteValue = false;
+
+        foreach (var value in values)
+        {
+            if (wroteValue)
+                _stringBuilder.Append(separator);
+
+            _stringBuilder.Append(value);
+            wroteValue = true;
+        }
+
+        return this;
+    }
+
+    /// <summary>Appends the current indent and then the given strings to the string being built.</summary>
+    /// <typeparam name="T">The type of the members of values.</typeparam>
+    /// <param name="values">A collection that contains the objects to concatenate and append to the current instance of the string builder.</param>
+    /// <param name="separator">The string to use as a separator. separator is included in the concatenated and appended strings only if values has more than one element.</param>
+    /// <param name="condition"></param>
+    /// <returns>This builder so that additional calls can be chained.</returns>
+    public virtual IndentedStringBuilder AppendJoinIf<T>(IEnumerable<T> values, string separator, Func<IEnumerable<T>, bool>? condition = null)
+    {
+        var c = condition ?? (s => s.Any());
+
+        if (c(values))
+            AppendJoin(values, separator);
+
+        return this;
+    }
+
+    /// <summary>Appends the current indent and then the given strings to the string being built.</summary>
+    /// <typeparam name="T">The type of the members of values.</typeparam>
+    /// <param name="values">A collection that contains the objects to concatenate and append to the current instance of the string builder.</param>
+    /// <param name="separator">The string to use as a separator. separator is included in the concatenated and appended strings only if values has more than one element.</param>
+    /// <param name="condition"></param>
+    /// <returns>This builder so that additional calls can be chained.</returns>
+    public virtual IndentedStringBuilder AppendJoinIf<T>(IEnumerable<T> values, string separator, bool condition)
+    {
+        if (condition)
+            AppendJoin(values, separator);
 
         return this;
     }
@@ -137,6 +214,49 @@ public class IndentedStringBuilder
 
         if (!skipFinalNewline)
             AppendLine();
+
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a copy of the specified string if <paramref name="condition"/> is met.
+    /// </summary>
+    /// <param name="text">The string to append.</param>
+    /// <param name="condition">The condition delegate to evaluate. If condition is null, String.IsNullOrWhiteSpace method will be used.</param>
+    public IndentedStringBuilder AppendIf(string text, Func<string, bool>? condition = null)
+    {
+        var c = condition ?? (s => !string.IsNullOrEmpty(s));
+
+        if (c(text))
+            Append(text);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a copy of the specified string if <paramref name="condition"/> is met.
+    /// </summary>
+    /// <param name="text">The string to append.</param>
+    /// <param name="condition">The condition delegate to evaluate. If condition is null, String.IsNullOrWhiteSpace method will be used.</param>
+    public IndentedStringBuilder AppendIf(string text, bool condition)
+    {
+        if (condition)
+            Append(text);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a copy of the specified string followed by the default line terminator if <paramref name="condition"/> is met.
+    /// </summary>
+    /// <param name="text">The string to append.</param>
+    /// <param name="condition">The condition delegate to evaluate. If condition is null, String.IsNullOrWhiteSpace method will be used.</param>
+    public IndentedStringBuilder AppendLineIf(string text, Func<string, bool>? condition = null)
+    {
+        var c = condition ?? (s => !string.IsNullOrEmpty(s));
+
+        if (c(text))
+            AppendLine(text);
 
         return this;
     }

@@ -29,6 +29,14 @@ public abstract class RegisterAttribute : Attribute
     /// <seealso cref="P:Microsoft.Extensions.DependencyInjection.ServiceDescriptor.ServiceType"/>
     public Type? ServiceType { get; set; }
 
+#if NET8_0_OR_GREATER
+    /// <summary>
+    /// Gets or sets the key of the service.
+    /// </summary>
+    /// <value>The service key.</value>
+    /// <seealso cref="P:Microsoft.Extensions.DependencyInjection.ServiceDescriptor.ServiceKey "/>
+    public object? ServiceKey { get; set; }
+#endif
 
     /// <summary>
     /// Name of a factory method to create new instances of the service implementation

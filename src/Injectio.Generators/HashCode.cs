@@ -1,387 +1,238 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
-
-namespace Injectio.Generators;
+﻿namespace Injectio.Generators;
 
 
 /// <summary>
-/// Polyfill for .NET 6 HashCode
+/// An immutable hash code structure
 /// </summary>
-internal struct HashCode
+/// <remarks>
+/// Implements the Jon Skeet suggested implementation of GetHashCode().
+/// </remarks>
+public readonly struct HashCode : IFormattable, IEquatable<HashCode>
 {
-    private static readonly uint s_seed = GenerateGlobalSeed();
+    /// <summary>
+    /// The prime multiplier used to combine hash codes.
+    /// </summary>
+    public const int Multiplier = 31;
 
-    private const uint Prime1 = 2654435761U;
-    private const uint Prime2 = 2246822519U;
-    private const uint Prime3 = 3266489917U;
-    private const uint Prime4 = 668265263U;
-    private const uint Prime5 = 374761393U;
+    private readonly int _hashCode;
 
-    private uint _v1, _v2, _v3, _v4;
-    private uint _queue1, _queue2, _queue3;
-    private uint _length;
-
-    private static uint GenerateGlobalSeed()
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HashCode"/> struct.
+    /// </summary>
+    /// <param name="hashCode">The hash code.</param>
+    public HashCode(int hashCode)
     {
-        var buffer = new byte[sizeof(uint)];
-        new Random().NextBytes(buffer);
-        return BitConverter.ToUInt32(buffer, 0);
+        _hashCode = hashCode;
     }
 
-    public static int Combine<T1>(T1 value1)
+    /// <summary>
+    /// Gets a hash code seed value for combine hash codes values.
+    /// </summary>
+    /// <value>
+    /// The hash code seed value.
+    /// </value>
+    public static HashCode Seed => new(17);
+
+    /// <summary>
+    /// Combines this hash code with the hash code of specified <paramref name="value" />.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the value.</typeparam>
+    /// <param name="value">The value to combine hash codes with.</param>
+    /// <returns>A new hash code combined with this and the values hash codes.</returns>
+    public HashCode Combine<TValue>(TValue? value)
     {
-        // Provide a way of diffusing bits from something with a limited
-        // input hash space. For example, many enums only have a few
-        // possible hashes, only using the bottom few bits of the code. Some
-        // collections are built on the assumption that hashes are spread
-        // over a larger space, so diffusing the bits may help the
-        // collection work more efficiently.
+        var hashCode = value is null ? 0 : EqualityComparer<TValue>.Default.GetHashCode(value);
+        unchecked
+        {
+            hashCode = (_hashCode * Multiplier) + hashCode;
+        }
 
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-
-        uint hash = MixEmptyState();
-        hash += 4;
-
-        hash = QueueRound(hash, hc1);
-
-        hash = MixFinal(hash);
-        return (int)hash;
+        return new HashCode(hashCode);
     }
 
-    public static int Combine<T1, T2>(T1 value1, T2 value2)
+    /// <summary>
+    /// Combines this hash code with the hash code of specified <paramref name="value" />.
+    /// </summary>
+    /// <param name="value">The value to combine hash codes with.</param>
+    /// <returns>A new hash code combined with this and the values hash codes.</returns>
+    public HashCode Combine(string value)
     {
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-        uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
+        // need to handle string values deterministically
+        var hashCode = HashString(value);
+        unchecked
+        {
+            hashCode = (_hashCode * Multiplier) + hashCode;
+        }
 
-        uint hash = MixEmptyState();
-        hash += 8;
-
-        hash = QueueRound(hash, hc1);
-        hash = QueueRound(hash, hc2);
-
-        hash = MixFinal(hash);
-        return (int)hash;
+        return new HashCode(hashCode);
     }
 
-    public static int Combine<T1, T2, T3>(T1 value1, T2 value2, T3 value3)
+    /// <summary>
+    /// Combines this hash code with the hash code of specified <paramref name="value" />.
+    /// </summary>
+    /// <param name="value">The value to combine hash codes with.</param>
+    /// <returns>A new hash code combined with this and the values hash codes.</returns>
+    public HashCode Combine(object? value)
     {
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-        uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
-        uint hc3 = (uint)(value3?.GetHashCode() ?? 0);
-
-        uint hash = MixEmptyState();
-        hash += 12;
-
-        hash = QueueRound(hash, hc1);
-        hash = QueueRound(hash, hc2);
-        hash = QueueRound(hash, hc3);
-
-        hash = MixFinal(hash);
-        return (int)hash;
+        // need to handle string values deterministically
+        return value switch
+        {
+            string text => Combine(text),
+            _ => Combine(value?.GetHashCode() ?? 0),
+        };
     }
 
-    public static int Combine<T1, T2, T3, T4>(T1 value1, T2 value2, T3 value3, T4 value4)
+    /// <summary>
+    /// Combines this hash code with the hash code of each item specified <paramref name="values" />.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the value.</typeparam>
+    /// <param name="values">The values to combine hash codes with.</param>
+    /// <returns>A new hash code combined with this and the values hash codes.</returns>
+    public HashCode CombineAll<TValue>(IEnumerable<TValue>? values)
     {
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-        uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
-        uint hc3 = (uint)(value3?.GetHashCode() ?? 0);
-        uint hc4 = (uint)(value4?.GetHashCode() ?? 0);
+        if (values == null)
+            return this;
 
-        Initialize(out uint v1, out uint v2, out uint v3, out uint v4);
+        var comparer = EqualityComparer<TValue>.Default;
+        var current = _hashCode;
 
-        v1 = Round(v1, hc1);
-        v2 = Round(v2, hc2);
-        v3 = Round(v3, hc3);
-        v4 = Round(v4, hc4);
+        foreach (var value in values)
+        {
+            var hashCode = value switch
+            {
+                string text => HashString(text),
+                TValue instance => comparer.GetHashCode(instance),
+                _ => 0
+            };
 
-        uint hash = MixState(v1, v2, v3, v4);
-        hash += 16;
+            unchecked
+            {
+                hashCode = (current * Multiplier) + hashCode;
+            }
 
-        hash = MixFinal(hash);
-        return (int)hash;
+            current = hashCode;
+        }
+
+        return new HashCode(current);
     }
 
-    public static int Combine<T1, T2, T3, T4, T5>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5)
+
+    /// <summary>
+    /// Returns a hash code for this instance.
+    /// </summary>
+    /// <returns>
+    /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
+    /// </returns>
+    public override int GetHashCode() => _hashCode;
+
+
+    /// <summary>
+    /// Converts the numeric value of this instance to its equivalent string representation.
+    /// </summary>
+    /// <returns>
+    /// The string representation of the value of this instance.
+    /// </returns>
+    public override string ToString() => _hashCode.ToString();
+
+    /// <summary>
+    /// Converts the numeric value of this instance to its equivalent string representation using the specified culture-specific format information.
+    /// </summary>
+    /// <param name="provider">An object that supplies culture-specific formatting information.</param>
+    /// <returns>
+    /// The string representation of the value of this instance as specified by provider.
+    /// </returns>
+    public string ToString(IFormatProvider provider) => _hashCode.ToString(provider);
+
+    /// <summary>
+    /// Converts the numeric value of this instance to its equivalent string representation using the specified format.
+    /// </summary>
+    /// <param name="format">A standard or custom numeric format string.</param>
+    /// <returns>
+    /// The string representation of the value of this instance as specified by format.
+    /// </returns>
+    public string ToString(string format) => _hashCode.ToString(format);
+
+    /// <summary>
+    /// Converts the numeric value of this instance to its equivalent string representation using the specified format and culture-specific format information.
+    /// </summary>
+    /// <param name="format">A standard or custom numeric format string.</param>
+    /// <param name="provider">An object that supplies culture-specific formatting information.</param>
+    /// <returns>
+    /// The string representation of the value of this instance as specified by format and provider.
+    /// </returns>
+    public string ToString(string format, IFormatProvider provider) => _hashCode.ToString(format, provider);
+
+
+    /// <summary>
+    /// Determines whether the specified <see cref="object" />, is equal to this instance.
+    /// </summary>
+    /// <param name="other">The <see cref="object" /> to compare with this instance.</param>
+    /// <returns>
+    ///   <c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.
+    /// </returns>
+    public override bool Equals(object? other) => other is HashCode code && Equals(code);
+
+    /// <summary>
+    /// Indicates whether the current object is equal to another object of the same type.
+    /// </summary>
+    /// <param name="other">An object to compare with this object.</param>
+    /// <returns>
+    /// true if the current object is equal to the <paramref name="other">other</paramref> parameter; otherwise, false.
+    /// </returns>
+    public bool Equals(HashCode other) => _hashCode == other._hashCode;
+
+
+    /// <summary>
+    /// Performs an implicit conversion from <see cref="HashCode"/> to <see cref="int"/>.
+    /// </summary>
+    /// <param name="hashCode">The hash code.</param>
+    /// <returns>
+    /// The result of the conversion.
+    /// </returns>
+    public static implicit operator int(HashCode hashCode) => hashCode._hashCode;
+
+    /// <summary>
+    /// Compares two values to determine equality.
+    /// </summary>
+    /// <param name="left">The value to compare with right.</param>
+    /// <param name="right">The value to compare with left.</param>
+    /// <returns>
+    /// true if left is equal to right; otherwise, false.
+    /// </returns>
+    public static bool operator ==(HashCode left, HashCode right) => left.Equals(right);
+
+    /// <summary>
+    /// Compares two values to determine inequality.
+    /// </summary>
+    /// <param name="left">The value to compare with right.</param>
+    /// <param name="right">The value to compare with left.</param>
+    /// <returns>
+    /// true if left is not equal to right; otherwise, false.
+    /// </returns>
+    public static bool operator !=(HashCode left, HashCode right) => !(left == right);
+
+
+    /// <summary>
+    /// Deterministic string hash function
+    /// </summary>
+    /// <param name="text">The text to hash.</param>
+    /// <returns>A 32-bit signed integer hash code.</returns>
+    public static int HashString(string text)
     {
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-        uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
-        uint hc3 = (uint)(value3?.GetHashCode() ?? 0);
-        uint hc4 = (uint)(value4?.GetHashCode() ?? 0);
-        uint hc5 = (uint)(value5?.GetHashCode() ?? 0);
+        if (string.IsNullOrEmpty(text))
+            return 0;
 
-        Initialize(out uint v1, out uint v2, out uint v3, out uint v4);
+        int hash = Seed;
 
-        v1 = Round(v1, hc1);
-        v2 = Round(v2, hc2);
-        v3 = Round(v3, hc3);
-        v4 = Round(v4, hc4);
+        unchecked
+        {
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var index = 0; index < text.Length; index++)
+                hash = (hash * Multiplier) + text[index];
 
-        uint hash = MixState(v1, v2, v3, v4);
-        hash += 20;
+        }
 
-        hash = QueueRound(hash, hc5);
-
-        hash = MixFinal(hash);
-        return (int)hash;
-    }
-
-    public static int Combine<T1, T2, T3, T4, T5, T6>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6)
-    {
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-        uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
-        uint hc3 = (uint)(value3?.GetHashCode() ?? 0);
-        uint hc4 = (uint)(value4?.GetHashCode() ?? 0);
-        uint hc5 = (uint)(value5?.GetHashCode() ?? 0);
-        uint hc6 = (uint)(value6?.GetHashCode() ?? 0);
-
-        Initialize(out uint v1, out uint v2, out uint v3, out uint v4);
-
-        v1 = Round(v1, hc1);
-        v2 = Round(v2, hc2);
-        v3 = Round(v3, hc3);
-        v4 = Round(v4, hc4);
-
-        uint hash = MixState(v1, v2, v3, v4);
-        hash += 24;
-
-        hash = QueueRound(hash, hc5);
-        hash = QueueRound(hash, hc6);
-
-        hash = MixFinal(hash);
-        return (int)hash;
-    }
-
-    public static int Combine<T1, T2, T3, T4, T5, T6, T7>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5,
-        T6 value6, T7 value7)
-    {
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-        uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
-        uint hc3 = (uint)(value3?.GetHashCode() ?? 0);
-        uint hc4 = (uint)(value4?.GetHashCode() ?? 0);
-        uint hc5 = (uint)(value5?.GetHashCode() ?? 0);
-        uint hc6 = (uint)(value6?.GetHashCode() ?? 0);
-        uint hc7 = (uint)(value7?.GetHashCode() ?? 0);
-
-        Initialize(out uint v1, out uint v2, out uint v3, out uint v4);
-
-        v1 = Round(v1, hc1);
-        v2 = Round(v2, hc2);
-        v3 = Round(v3, hc3);
-        v4 = Round(v4, hc4);
-
-        uint hash = MixState(v1, v2, v3, v4);
-        hash += 28;
-
-        hash = QueueRound(hash, hc5);
-        hash = QueueRound(hash, hc6);
-        hash = QueueRound(hash, hc7);
-
-        hash = MixFinal(hash);
-        return (int)hash;
-    }
-
-    public static int Combine<T1, T2, T3, T4, T5, T6, T7, T8>(T1 value1, T2 value2, T3 value3, T4 value4, T5 value5,
-        T6 value6, T7 value7, T8 value8)
-    {
-        uint hc1 = (uint)(value1?.GetHashCode() ?? 0);
-        uint hc2 = (uint)(value2?.GetHashCode() ?? 0);
-        uint hc3 = (uint)(value3?.GetHashCode() ?? 0);
-        uint hc4 = (uint)(value4?.GetHashCode() ?? 0);
-        uint hc5 = (uint)(value5?.GetHashCode() ?? 0);
-        uint hc6 = (uint)(value6?.GetHashCode() ?? 0);
-        uint hc7 = (uint)(value7?.GetHashCode() ?? 0);
-        uint hc8 = (uint)(value8?.GetHashCode() ?? 0);
-
-        Initialize(out uint v1, out uint v2, out uint v3, out uint v4);
-
-        v1 = Round(v1, hc1);
-        v2 = Round(v2, hc2);
-        v3 = Round(v3, hc3);
-        v4 = Round(v4, hc4);
-
-        v1 = Round(v1, hc5);
-        v2 = Round(v2, hc6);
-        v3 = Round(v3, hc7);
-        v4 = Round(v4, hc8);
-
-        uint hash = MixState(v1, v2, v3, v4);
-        hash += 32;
-
-        hash = MixFinal(hash);
-        return (int)hash;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Initialize(out uint v1, out uint v2, out uint v3, out uint v4)
-    {
-        v1 = s_seed + Prime1 + Prime2;
-        v2 = s_seed + Prime2;
-        v3 = s_seed;
-        v4 = s_seed - Prime1;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint Round(uint hash, uint input)
-    {
-        return RotateLeft(hash + input * Prime2, 13) * Prime1;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint QueueRound(uint hash, uint queuedValue)
-    {
-        return RotateLeft(hash + queuedValue * Prime3, 17) * Prime4;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint MixState(uint v1, uint v2, uint v3, uint v4)
-    {
-        return RotateLeft(v1, 1) + RotateLeft(v2, 7) + RotateLeft(v3, 12) + RotateLeft(v4, 18);
-    }
-
-    private static uint MixEmptyState()
-    {
-        return s_seed + Prime5;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint MixFinal(uint hash)
-    {
-        hash ^= hash >> 15;
-        hash *= Prime2;
-        hash ^= hash >> 13;
-        hash *= Prime3;
-        hash ^= hash >> 16;
         return hash;
     }
-
-    public void Add<T>(T value)
-    {
-        Add(value?.GetHashCode() ?? 0);
-    }
-
-    public void Add<T>(T value, IEqualityComparer<T> comparer)
-    {
-        Add(value is null ? 0 : (comparer?.GetHashCode(value) ?? value.GetHashCode()));
-    }
-
-    private void Add(int value)
-    {
-        // The original xxHash works as follows:
-        // 0. Initialize immediately. We can't do this in a struct (no
-        //    default ctor).
-        // 1. Accumulate blocks of length 16 (4 uints) into 4 accumulators.
-        // 2. Accumulate remaining blocks of length 4 (1 uint) into the
-        //    hash.
-        // 3. Accumulate remaining blocks of length 1 into the hash.
-
-        // There is no need for #3 as this type only accepts ints. _queue1,
-        // _queue2 and _queue3 are basically a buffer so that when
-        // ToHashCode is called we can execute #2 correctly.
-
-        // We need to initialize the xxHash32 state (_v1 to _v4) lazily (see
-        // #0) nd the last place that can be done if you look at the
-        // original code is just before the first block of 16 bytes is mixed
-        // in. The xxHash32 state is never used for streams containing fewer
-        // than 16 bytes.
-
-        // To see what's really going on here, have a look at the Combine
-        // methods.
-
-        uint val = (uint)value;
-
-        // Storing the value of _length locally shaves of quite a few bytes
-        // in the resulting machine code.
-        uint previousLength = _length++;
-        uint position = previousLength % 4;
-
-        // Switch can't be inlined.
-
-        if (position == 0)
-            _queue1 = val;
-        else if (position == 1)
-            _queue2 = val;
-        else if (position == 2)
-            _queue3 = val;
-        else // position == 3
-        {
-            if (previousLength == 3)
-                Initialize(out _v1, out _v2, out _v3, out _v4);
-
-            _v1 = Round(_v1, _queue1);
-            _v2 = Round(_v2, _queue2);
-            _v3 = Round(_v3, _queue3);
-            _v4 = Round(_v4, val);
-        }
-    }
-
-    public int ToHashCode()
-    {
-        // Storing the value of _length locally shaves of quite a few bytes
-        // in the resulting machine code.
-        uint length = _length;
-
-        // position refers to the *next* queue position in this method, so
-        // position == 1 means that _queue1 is populated; _queue2 would have
-        // been populated on the next call to Add.
-        uint position = length % 4;
-
-        // If the length is less than 4, _v1 to _v4 don't contain anything
-        // yet. xxHash32 treats this differently.
-
-        uint hash = length < 4 ? MixEmptyState() : MixState(_v1, _v2, _v3, _v4);
-
-        // _length is incremented once per Add(Int32) and is therefore 4
-        // times too small (xxHash length is in bytes, not ints).
-
-        hash += length * 4;
-
-        // Mix what remains in the queue
-
-        // Switch can't be inlined right now, so use as few branches as
-        // possible by manually excluding impossible scenarios (position > 1
-        // is always false if position is not > 0).
-        if (position > 0)
-        {
-            hash = QueueRound(hash, _queue1);
-            if (position > 1)
-            {
-                hash = QueueRound(hash, _queue2);
-                if (position > 2)
-                    hash = QueueRound(hash, _queue3);
-            }
-        }
-
-        hash = MixFinal(hash);
-        return (int)hash;
-    }
-
-#pragma warning disable 0809
-    // Obsolete member 'memberA' overrides non-obsolete member 'memberB'.
-    // Disallowing GetHashCode and Equals is by design
-
-    // * We decided to not override GetHashCode() to produce the hash code
-    //   as this would be weird, both naming-wise as well as from a
-    //   behavioral standpoint (GetHashCode() should return the object's
-    //   hash code, not the one being computed).
-
-    // * Even though ToHashCode() can be called safely multiple times on
-    //   this implementation, it is not part of the contract. If the
-    //   implementation has to change in the future we don't want to worry
-    //   about people who might have incorrectly used this type.
-
-    [Obsolete(
-        "HashCode is a mutable struct and should not be compared with other HashCodes. Use ToHashCode to retrieve the computed hash code.",
-        error: true)]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public override int GetHashCode() => throw new NotSupportedException("Hash code not supported");
-
-    [Obsolete("HashCode is a mutable struct and should not be compared with other HashCodes.", error: true)]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public override bool Equals(object obj) => throw new NotSupportedException("Equality not supported");
-#pragma warning restore 0809
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint RotateLeft(uint value, int offset)
-        => (value << offset) | (value >> (32 - offset));
 }
-

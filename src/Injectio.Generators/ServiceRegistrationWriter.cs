@@ -202,12 +202,21 @@ public static class ServiceRegistrationWriter
             .AppendLine("(")
             .IncrementIndent()
             .AppendLine("serviceCollection,")
-            .AppendLine("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(")
+            .Append("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.")
+            .Append(serviceRegistration.ServiceKey != null ? "DescribeKeyed" : "Describe")
+            .AppendLine("(")
             .IncrementIndent()
             .Append("typeof(")
             .AppendIf("global::", !serviceType.StartsWith("global::"))
             .Append(serviceType)
             .AppendLine("),");
+
+        if (serviceRegistration.ServiceKey != null)
+        {
+            codeBuilder
+                .Append(serviceRegistration.ServiceKey)
+                .AppendLine(",");
+        }
 
         if (serviceRegistration.Factory.HasValue())
         {

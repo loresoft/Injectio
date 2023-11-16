@@ -8,6 +8,7 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
         string lifetime,
         string implementationType,
         IEnumerable<string> serviceTypes,
+        string serviceKey,
         string factory,
         DuplicateStrategy duplicate,
         RegistrationStrategy registration,
@@ -16,6 +17,7 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
         Lifetime = lifetime;
         ImplementationType = implementationType;
         ServiceTypes = new EquatableArray<string>(serviceTypes);
+        ServiceKey = serviceKey;
         Factory = factory;
         Duplicate = duplicate;
         Registration = registration;
@@ -27,6 +29,8 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
     public string ImplementationType { get; }
 
     public EquatableArray<string> ServiceTypes { get; }
+
+    public string ServiceKey { get; }
 
     public string Factory { get; }
 
@@ -46,6 +50,7 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
         return Lifetime == other.Lifetime
                && ImplementationType == other.ImplementationType
                && ServiceTypes.Equals(other.ServiceTypes)
+               && ServiceKey == other.ServiceKey
                && Factory == other.Factory
                && Duplicate == other.Duplicate
                && Registration == other.Registration
@@ -60,14 +65,15 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(
-            Lifetime,
-            ImplementationType,
-            ServiceTypes,
-            Factory,
-            Duplicate,
-            Registration,
-            Tags);
+        return HashCode.Seed
+            .Combine(Lifetime)
+            .Combine(ImplementationType)
+            .CombineAll(ServiceTypes)
+            .Combine(ServiceKey)
+            .Combine(Factory)
+            .Combine(Duplicate)
+            .Combine(Registration)
+            .CombineAll(Tags);
     }
 
     public static bool operator ==(ServiceRegistration left, ServiceRegistration right)

@@ -20,6 +20,11 @@ var module = provider.GetRequiredService<IModuleService>();
 var generic = provider.GetRequiredService<IOpenGeneric<string>>();
 var tagService = provider.GetService<IServiceTag>();
 
+var alpaService = provider.GetKeyedService<IServiceKeyed>("Alpha");
+var betaTypeService = provider.GetKeyedService<IServiceKeyed>(ServiceType.Beta);
+var charlieService = provider.GetKeyedService<IServiceKeyed>("Charlie");
+var deltaService = provider.GetKeyedService<IServiceKeyed>("Delta");
+
 Console.WriteLine("Complete");
 
 public interface ILocalService { }

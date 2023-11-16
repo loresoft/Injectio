@@ -87,3 +87,54 @@ public interface IServiceTag
 public class ServiceTag : IServiceTag
 {
 }
+
+public interface IServiceKeyed
+{
+
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Alpha")]
+public class ServiceAlphaKeyed : IServiceKeyed
+{
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Beta")]
+public class ServiceBetaKeyed : IServiceKeyed
+{
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = ServiceType.Alpha)]
+public class ServiceAlphaTypeKeyed : IServiceKeyed
+{
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = ServiceType.Beta)]
+public class ServiceBetaTypeKeyed : IServiceKeyed
+{
+}
+
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Charlie", Factory = nameof(ServiceFactory))]
+[RegisterSingleton<IServiceKeyed>(ServiceKey = "Delta", Factory = nameof(ServiceFactory))]
+public class ServiceFactoryKeyed : IServiceKeyed
+{
+    public ServiceFactoryKeyed(object? serviceKey)
+    {
+        ServiceKey = serviceKey;
+    }
+
+    public object? ServiceKey { get; }
+
+    public static IServiceKeyed ServiceFactory(IServiceProvider serviceProvider, object? serviceKey)
+    {
+        return new ServiceFactoryKeyed(serviceKey);
+    }
+
+}
+
+public enum ServiceType
+{
+    Alpha,
+    Beta,
+    Charlie,
+    Delta
+}

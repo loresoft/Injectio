@@ -229,6 +229,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         DuplicateStrategy? duplicateStrategy = null;
         RegistrationStrategy? registrationStrategy = null;
         var tags = new HashSet<string>();
+        string serviceKey = null;
 
         var attributeClass = attribute.AttributeClass;
         if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
@@ -264,6 +265,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             {
                 case "ServiceType":
                     serviceTypes.Add(value.ToString());
+                    break;
+                case "ServiceKey":
+                    serviceKey = parameter.Value.ToCSharpString();
                     break;
                 case "ImplementationType":
                     implementationType = value.ToString();
@@ -327,6 +331,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             serviceLifetime,
             implementationType,
             serviceTypes,
+            serviceKey,
             implementationFactory,
             duplicateStrategy ?? DuplicateStrategy.Skip,
             registrationStrategy ?? RegistrationStrategy.SelfWithInterfaces,

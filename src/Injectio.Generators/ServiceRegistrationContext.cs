@@ -40,7 +40,10 @@ public sealed class ServiceRegistrationContext : IEquatable<ServiceRegistrationC
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Diagnostics, ServiceRegistrations, ModuleRegistrations);
+        return HashCode.Seed
+            .Combine(Diagnostics)
+            .Combine(ServiceRegistrations)
+            .Combine(ModuleRegistrations);
     }
 
     public static bool operator ==(ServiceRegistrationContext left, ServiceRegistrationContext right)
