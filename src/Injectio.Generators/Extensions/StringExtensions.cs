@@ -17,7 +17,7 @@ public static class StringExtensions
     /// <returns>
     /// A truncate string.
     /// </returns>
-    public static string Truncate(this string text, int keep, string ellipsis = "...")
+    public static string Truncate(this string? text, int keep, string ellipsis = "...")
     {
         if (string.IsNullOrEmpty(text))
             return string.Empty;
@@ -25,7 +25,7 @@ public static class StringExtensions
         if (string.IsNullOrEmpty(ellipsis))
             ellipsis = string.Empty;
 
-        if (text.Length <= keep)
+        if (text!.Length <= keep)
             return text;
 
         if (text.Length <= keep + ellipsis.Length || keep < ellipsis.Length)
@@ -41,7 +41,7 @@ public static class StringExtensions
     /// <returns>
     ///     <c>true</c> if is null or empty; otherwise, <c>false</c>.
     /// </returns>
-    public static bool IsNullOrEmpty(this string item)
+    public static bool IsNullOrEmpty(this string? item)
     {
         return string.IsNullOrEmpty(item);
     }
@@ -53,7 +53,7 @@ public static class StringExtensions
     /// <returns>
     ///      <c>true</c> if is null or empty; otherwise, <c>false</c>.
     /// </returns>
-    public static bool IsNullOrWhiteSpace(this string item)
+    public static bool IsNullOrWhiteSpace(this string? item)
     {
         if (item == null)
             return true;
@@ -72,7 +72,7 @@ public static class StringExtensions
     /// <returns>
     ///   <c>true</c> if the specified <paramref name="value"/> is not <see cref="IsNullOrEmpty"/>; otherwise, <c>false</c>.
     /// </returns>
-    public static bool HasValue(this string value)
+    public static bool HasValue(this string? value)
     {
         return !string.IsNullOrEmpty(value);
     }
@@ -84,7 +84,7 @@ public static class StringExtensions
     /// <param name="sb">The StringBuilder instance to append to.</param>
     /// <param name="text">The string to append.</param>
     /// <param name="condition">The condition delegate to evaluate. If condition is null, String.IsNullOrWhiteSpace method will be used.</param>
-    public static IndentedStringBuilder AppendIf(this IndentedStringBuilder sb, string text, Func<string, bool> condition = null)
+    public static IndentedStringBuilder AppendIf(this IndentedStringBuilder sb, string text, Func<string, bool>? condition = null)
     {
         var c = condition ?? (s => !string.IsNullOrWhiteSpace(s));
 
@@ -114,7 +114,7 @@ public static class StringExtensions
     /// <param name="sb">The StringBuilder instance to append to.</param>
     /// <param name="text">The string to append.</param>
     /// <param name="condition">The condition delegate to evaluate. If condition is null, String.IsNullOrWhiteSpace method will be used.</param>
-    public static IndentedStringBuilder AppendLineIf(this IndentedStringBuilder sb, string text, Func<string, bool> condition = null)
+    public static IndentedStringBuilder AppendLineIf(this IndentedStringBuilder sb, string text, Func<string, bool>? condition = null)
     {
         var c = condition ?? (s => !string.IsNullOrWhiteSpace(s));
 
@@ -130,9 +130,9 @@ public static class StringExtensions
     /// </summary>
     /// <param name="text">The text to convert.</param>
     /// <returns>The text with a space before every capital letter</returns>
-    public static string ToTitle(this string text)
+    public static string? ToTitle(this string? text)
     {
-        if (string.IsNullOrWhiteSpace(text) || text.Length < 2)
+        if (string.IsNullOrWhiteSpace(text) || text?.Length < 2)
             return text;
 
         var words = Regex.Matches(text, "([A-Z][a-z]*)|([0-9]+)") as IEnumerable<Match>;

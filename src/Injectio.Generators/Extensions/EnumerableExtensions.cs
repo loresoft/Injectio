@@ -9,7 +9,7 @@ public static class EnumerableExtensions
         return values.ToDelimitedString(",");
     }
 
-    public static string ToDelimitedString<T>(this IEnumerable<T> values, string delimiter)
+    public static string ToDelimitedString<T>(this IEnumerable<T>? values, string delimiter)
     {
         if (values is null)
             return string.Empty;
@@ -19,26 +19,28 @@ public static class EnumerableExtensions
         {
             if (sb.Length > 0)
                 sb.Append(delimiter ?? ",");
-            sb.Append(i.ToString());
+            sb.Append(i);
         }
 
         return sb.ToString();
     }
 
-    public static string ToDelimitedString(this IEnumerable<string> values)
+    public static string ToDelimitedString(this IEnumerable<string>? values)
     {
         return values.ToDelimitedString(",");
     }
 
-    public static string ToDelimitedString(this IEnumerable<string> values, string delimiter)
+    public static string ToDelimitedString(this IEnumerable<string>? values, string? delimiter)
     {
         return values.ToDelimitedString(delimiter, null);
     }
 
-    public static string ToDelimitedString(this IEnumerable<string> values, string delimiter, Func<string, string> escapeDelimiter)
+    public static string ToDelimitedString(this IEnumerable<string>? values, string? delimiter, Func<string, string>? escapeDelimiter)
     {
         if (values is null)
             return string.Empty;
+
+        delimiter ??= ",";
 
         var sb = new StringBuilder();
         foreach (var value in values)

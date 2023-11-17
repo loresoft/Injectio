@@ -6,8 +6,6 @@ namespace Microsoft.Extensions.DependencyInjection
     /// <summary>
     /// Extension methods for discovered service registrations
     /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.Diagnostics.DebuggerStepThroughAttribute]
     public static class DiscoveredServicesExtensions
     {
         /// <summary>

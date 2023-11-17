@@ -1,4 +1,4 @@
-﻿namespace Injectio.Generators;
+namespace Injectio.Generators;
 
 
 /// <summary>
@@ -55,7 +55,7 @@ public readonly struct HashCode : IFormattable, IEquatable<HashCode>
     /// </summary>
     /// <param name="value">The value to combine hash codes with.</param>
     /// <returns>A new hash code combined with this and the values hash codes.</returns>
-    public HashCode Combine(string value)
+    public HashCode Combine(string? value)
     {
         // need to handle string values deterministically
         var hashCode = HashString(value);
@@ -217,7 +217,7 @@ public readonly struct HashCode : IFormattable, IEquatable<HashCode>
     /// </summary>
     /// <param name="text">The text to hash.</param>
     /// <returns>A 32-bit signed integer hash code.</returns>
-    public static int HashString(string text)
+    public static int HashString(string? text)
     {
         if (string.IsNullOrEmpty(text))
             return 0;
@@ -228,7 +228,7 @@ public readonly struct HashCode : IFormattable, IEquatable<HashCode>
         {
             // ReSharper disable once LoopCanBeConvertedToQuery
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (var index = 0; index < text.Length; index++)
+            for (var index = 0; index < text!.Length; index++)
                 hash = (hash * Multiplier) + text[index];
 
         }

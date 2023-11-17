@@ -25,14 +25,14 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         // Emit the diagnostics, if needed
         var diagnostics = pipeline
-            .Select(static (item, _) => item.Diagnostics)
+            .Select(static (item, _) => item!.Diagnostics)
             .Where(static item => item.Count > 0);
 
         context.RegisterSourceOutput(diagnostics, ReportDiagnostic);
 
         // select contexts with registrations
         var registrations = pipeline
-            .Where(static context => context.ServiceRegistrations.Count > 0 || context.ModuleRegistrations.Count > 0)
+            .Where(static context => context!.ServiceRegistrations.Count > 0 || context.ModuleRegistrations.Count > 0)
             .Collect();
 
         // include config options
@@ -54,7 +54,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private void ExecuteGeneration(
         SourceProductionContext sourceContext,
-        (ImmutableArray<ServiceRegistrationContext> Registrations, (string AssemblyName, string MethodName) Options) source)
+        (ImmutableArray<ServiceRegistrationContext?> Registrations, (string? AssemblyName, string? MethodName) Options) source)
     {
         var serviceRegistrations = source.Registrations
             .SelectMany(m => m.ServiceRegistrations)
@@ -97,7 +97,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                    && !memberDeclaration.Modifiers.Any(SyntaxKind.AbstractKeyword);
     }
 
-    private static ServiceRegistrationContext SemanticTransform(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    private static ServiceRegistrationContext? SemanticTransform(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         return context.Node switch
         {
@@ -107,7 +107,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         };
     }
 
-    private static ServiceRegistrationContext SemanticTransformMethod(GeneratorSyntaxContext context)
+    private static ServiceRegistrationContext? SemanticTransformMethod(GeneratorSyntaxContext context)
     {
         if (context.Node is not MethodDeclarationSyntax methodDeclaration)
             return null;
@@ -137,7 +137,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return new ServiceRegistrationContext(moduleRegistrations: new[] { registration });
     }
 
-    private static ServiceRegistrationContext SemanticTransformClass(GeneratorSyntaxContext context)
+    private static ServiceRegistrationContext? SemanticTransformClass(GeneratorSyntaxContext context)
     {
         if (context.Node is not ClassDeclarationSyntax classSyntax)
             return null;
@@ -149,12 +149,16 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         var attributes = classSymbol.GetAttributes();
 
         // support multiple register attributes on a class
-        var registrations = attributes
-            .Select(attribute => CreateServiceRegistration(classSymbol, attribute))
-            .Where(registration => registration != null)
-            .ToArray();
+        var registrations = new List<ServiceRegistration>();
 
-        if (registrations.Length == 0)
+        foreach (var attribute in attributes)
+        {
+            var registration = CreateServiceRegistration(classSymbol, attribute);
+            if (registration is not null)
+                registrations.Add(registration);
+        }
+        
+        if (registrations.Count == 0)
             return null;
 
         return new ServiceRegistrationContext(serviceRegistrations: registrations);
@@ -216,7 +220,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return (diagnostics, hasServiceCollection, hasTagCollection);
     }
 
-    private static ServiceRegistration CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
+    private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
     {
         // check for known attribute
         if (!IsKnownAttribute(attribute, out var serviceLifetime))
@@ -224,12 +228,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         // defaults
         var serviceTypes = new HashSet<string>();
-        string implementationType = null;
-        string implementationFactory = null;
+        string implementationType = null!;
+        string? implementationFactory = null;
         DuplicateStrategy? duplicateStrategy = null;
         RegistrationStrategy? registrationStrategy = null;
         var tags = new HashSet<string>();
-        string serviceKey = null;
+        string? serviceKey = null;
 
         var attributeClass = attribute.AttributeClass;
         if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
@@ -325,11 +329,11 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         // add class attribute is on; default service type if not set
         bool includeSelf = registrationStrategy is RegistrationStrategy.Self or RegistrationStrategy.SelfWithInterfaces;
         if (includeSelf || serviceTypes.Count == 0)
-            serviceTypes.Add(implementationType);
+            serviceTypes.Add(implementationType!);
 
         return new ServiceRegistration(
             serviceLifetime,
-            implementationType,
+            implementationType!,
             serviceTypes,
             serviceKey,
             implementationFactory,

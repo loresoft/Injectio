@@ -14,7 +14,7 @@ public readonly struct EquatableArray<T> : IReadOnlyCollection<T>, IEquatable<Eq
         _array = array;
     }
 
-    public EquatableArray(IEnumerable<T> array)
+    public EquatableArray(IEnumerable<T>? array)
     {
         array ??= Enumerable.Empty<T>();
         _array = array.ToArray();

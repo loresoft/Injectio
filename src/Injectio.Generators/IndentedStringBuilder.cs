@@ -24,7 +24,7 @@ public class IndentedStringBuilder
     /// </summary>
     /// <param name="value">The string to append.</param>
     /// <returns>This builder so that additional calls can be chained.</returns>
-    public virtual IndentedStringBuilder Append(string value)
+    public virtual IndentedStringBuilder Append(string? value)
     {
         DoIndent();
 
@@ -38,7 +38,7 @@ public class IndentedStringBuilder
     /// </summary>
     /// <param name="value">The value to append.</param>
     /// <returns>This builder so that additional calls can be chained.</returns>
-    public virtual IndentedStringBuilder Append<T>(T value)
+    public virtual IndentedStringBuilder Append<T>(T? value)
     {
         if (value == null)
             return this;
@@ -238,7 +238,7 @@ public class IndentedStringBuilder
     /// </summary>
     /// <param name="text">The string to append.</param>
     /// <param name="condition">The condition delegate to evaluate. If condition is null, String.IsNullOrWhiteSpace method will be used.</param>
-    public IndentedStringBuilder AppendIf(string text, bool condition)
+    public IndentedStringBuilder AppendIf(string? text, bool condition)
     {
         if (condition)
             Append(text);

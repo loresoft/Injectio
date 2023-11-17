@@ -8,8 +8,8 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
         string lifetime,
         string implementationType,
         IEnumerable<string> serviceTypes,
-        string serviceKey,
-        string factory,
+        string? serviceKey,
+        string? factory,
         DuplicateStrategy duplicate,
         RegistrationStrategy registration,
         IEnumerable<string> tags)
@@ -30,9 +30,9 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
 
     public EquatableArray<string> ServiceTypes { get; }
 
-    public string ServiceKey { get; }
+    public string? ServiceKey { get; }
 
-    public string Factory { get; }
+    public string? Factory { get; }
 
     public DuplicateStrategy Duplicate { get; }
 

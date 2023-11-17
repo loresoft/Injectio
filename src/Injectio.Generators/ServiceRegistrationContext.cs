@@ -5,9 +5,9 @@ namespace Injectio.Generators;
 public sealed class ServiceRegistrationContext : IEquatable<ServiceRegistrationContext>
 {
     public ServiceRegistrationContext(
-         IEnumerable<Diagnostic> diagnostics = null,
-         IEnumerable<ServiceRegistration> serviceRegistrations = null,
-         IEnumerable<ModuleRegistration> moduleRegistrations = null)
+         IEnumerable<Diagnostic>? diagnostics = null,
+         IEnumerable<ServiceRegistration>? serviceRegistrations = null,
+         IEnumerable<ModuleRegistration>? moduleRegistrations = null)
     {
         Diagnostics = new EquatableArray<Diagnostic>(diagnostics);
         ServiceRegistrations = new EquatableArray<ServiceRegistration>(serviceRegistrations);
@@ -20,7 +20,7 @@ public sealed class ServiceRegistrationContext : IEquatable<ServiceRegistrationC
 
     public EquatableArray<ModuleRegistration> ModuleRegistrations { get; }
 
-    public bool Equals(ServiceRegistrationContext other)
+    public bool Equals(ServiceRegistrationContext? other)
     {
         if (ReferenceEquals(null, other))
             return false;
@@ -32,7 +32,7 @@ public sealed class ServiceRegistrationContext : IEquatable<ServiceRegistrationC
                && ModuleRegistrations.Equals(other.ModuleRegistrations);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is ServiceRegistrationContext serviceContext
                && Equals(serviceContext);
@@ -46,12 +46,12 @@ public sealed class ServiceRegistrationContext : IEquatable<ServiceRegistrationC
             .Combine(ModuleRegistrations);
     }
 
-    public static bool operator ==(ServiceRegistrationContext left, ServiceRegistrationContext right)
+    public static bool operator ==(ServiceRegistrationContext? left, ServiceRegistrationContext? right)
     {
         return Equals(left, right);
     }
 
-    public static bool operator !=(ServiceRegistrationContext left, ServiceRegistrationContext right)
+    public static bool operator !=(ServiceRegistrationContext? left, ServiceRegistrationContext? right)
     {
         return !Equals(left, right);
     }

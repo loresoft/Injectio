@@ -33,9 +33,12 @@ public class CodeGeneratorTests
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
 
-        return Verifier.Verify(result).UseDirectory("Snapshots");
+        return Verifier
+            .Verify(result)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
     [Fact]
@@ -60,9 +63,12 @@ public class CodeGeneratorTests
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
 
-        return Verifier.Verify(result).UseDirectory("Snapshots");
+        return Verifier
+            .Verify(result)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
     [Fact]
@@ -83,9 +89,12 @@ public class CodeGeneratorTests
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
 
-        return Verifier.Verify(result).UseDirectory("Snapshots");
+        return Verifier
+            .Verify(result)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
     [Fact]
@@ -106,9 +115,12 @@ public class CodeGeneratorTests
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
 
-        return Verifier.Verify(result).UseDirectory("Snapshots");
+        return Verifier
+            .Verify(result)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
     [Fact]
@@ -129,9 +141,12 @@ public class CodeGeneratorTests
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests), true);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
 
-        return Verifier.Verify(result).UseDirectory("Snapshots");
+        return Verifier
+            .Verify(result)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 }
 
