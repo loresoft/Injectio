@@ -145,7 +145,7 @@ public class ServiceImplementation : IService { }
 
 #### Keyed Services
 
-You can register keyed services if your project targets .NET 8.0+
+You can register keyed services with version 8.0+ of `Microsoft.Extensions.DependencyInjection`
 
 Register a keyed service
 
