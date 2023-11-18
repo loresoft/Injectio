@@ -57,12 +57,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         (ImmutableArray<ServiceRegistrationContext?> Registrations, (string? AssemblyName, string? MethodName) Options) source)
     {
         var serviceRegistrations = source.Registrations
-            .SelectMany(m => m.ServiceRegistrations)
+            .SelectMany(m => m!.ServiceRegistrations)
             .Where(m => m is not null)
             .ToArray();
 
         var moduleRegistrations = source.Registrations
-            .SelectMany(m => m.ModuleRegistrations)
+            .SelectMany(m => m!.ModuleRegistrations)
             .Where(m => m is not null)
             .ToArray();
 
