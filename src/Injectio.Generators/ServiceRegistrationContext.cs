@@ -1,7 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Microsoft.CodeAnalysis;
 
 namespace Injectio.Generators;
 
+[ExcludeFromCodeCoverage]
 public sealed class ServiceRegistrationContext : IEquatable<ServiceRegistrationContext>
 {
     public ServiceRegistrationContext(

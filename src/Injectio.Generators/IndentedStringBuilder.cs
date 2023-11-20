@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Injectio.Generators;
@@ -5,6 +6,7 @@ namespace Injectio.Generators;
 /// <summary>
 /// A thin wrapper over <see cref="StringBuilder" /> that adds indentation to each line built.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class IndentedStringBuilder
 {
     private const byte IndentSize = 4;

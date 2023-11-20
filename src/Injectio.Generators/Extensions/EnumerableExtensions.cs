@@ -1,7 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Injectio.Generators.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class EnumerableExtensions
 {
     public static string ToDelimitedString<T>(this IEnumerable<T> values)

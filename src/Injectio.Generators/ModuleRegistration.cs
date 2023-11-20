@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Injectio.Generators;
 
+[ExcludeFromCodeCoverage]
 public sealed class ModuleRegistration : IEquatable<ModuleRegistration>
 {
     public ModuleRegistration(

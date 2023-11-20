@@ -26,13 +26,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\Injectio.Attributes\DuplicateStrategy.cs">
-      <Link>DuplicateStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Injectio.Attributes\RegistrationStrategy.cs">
-      <Link>RegistrationStrategy.cs</Link>
-    </Compile>
-  </ItemGroup>
-
 </Project>

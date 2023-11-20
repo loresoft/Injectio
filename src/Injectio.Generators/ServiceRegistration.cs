@@ -1,7 +1,8 @@
-using Injectio.Attributes;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Injectio.Generators;
 
+[ExcludeFromCodeCoverage]
 public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
 {
     public ServiceRegistration(
@@ -10,8 +11,8 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
         IEnumerable<string> serviceTypes,
         string? serviceKey,
         string? factory,
-        DuplicateStrategy duplicate,
-        RegistrationStrategy registration,
+        string duplicate,
+        string registration,
         IEnumerable<string> tags)
     {
         Lifetime = lifetime;
@@ -34,9 +35,9 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
 
     public string? Factory { get; }
 
-    public DuplicateStrategy Duplicate { get; }
+    public string Duplicate { get; }
 
-    public RegistrationStrategy Registration { get; }
+    public string Registration { get; }
 
     public EquatableArray<string> Tags { get; }
 
@@ -57,7 +58,7 @@ public sealed class ServiceRegistration : IEquatable<ServiceRegistration>
                && Tags.Equals(other.Tags);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is ServiceRegistration serviceRegistration
                && Equals(serviceRegistration);

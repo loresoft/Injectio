@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 
@@ -7,6 +8,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Injectio.Generators;
 
+[ExcludeFromCodeCoverage]
 internal class DiagnosticDescriptors
 {
     public static DiagnosticDescriptor InvalidModuleParameter => new(

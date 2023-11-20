@@ -13,7 +13,7 @@ namespace Injectio.Tests;
 
 
 [UsesVerify]
-public class CodeGeneratorTests
+public class ServiceRegistrationWriterTests
 {
     [Fact]
     public Task GenerateExtensionClassSingleton()
@@ -27,13 +27,13 @@ public class CodeGeneratorTests
                 serviceTypes: new[] { "Injectio.Tests.IService1" },
                 serviceKey: null,
                 factory: null,
-                duplicate: DuplicateStrategy.Skip,
-                registration: RegistrationStrategy.SelfWithInterfaces,
+                duplicate: KnownTypes.DuplicateStrategySkipShortName,
+                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
                 tags: Enumerable.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
 
         return Verifier
             .Verify(result)
@@ -57,13 +57,13 @@ public class CodeGeneratorTests
                 },
                 serviceKey: null,
                 factory: null,
-                duplicate: DuplicateStrategy.Skip,
-                registration: RegistrationStrategy.SelfWithInterfaces,
+                duplicate: KnownTypes.DuplicateStrategySkipShortName,
+                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
                 tags: Enumerable.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
 
         return Verifier
             .Verify(result)
@@ -83,13 +83,13 @@ public class CodeGeneratorTests
                 serviceTypes: new[] { "Injectio.Tests.IService1" },
                 serviceKey: null,
                 factory: null,
-                duplicate: DuplicateStrategy.Append,
-                registration: RegistrationStrategy.SelfWithInterfaces,
+                duplicate: KnownTypes.DuplicateStrategyAppendShortName,
+                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
                 tags: Enumerable.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
 
         return Verifier
             .Verify(result)
@@ -109,13 +109,13 @@ public class CodeGeneratorTests
                 serviceTypes: new[] { "Injectio.Tests.IService1" },
                 serviceKey: null,
                 factory: null,
-                duplicate: DuplicateStrategy.Replace,
-                registration: RegistrationStrategy.SelfWithInterfaces,
+                duplicate: KnownTypes.DuplicateStrategyReplaceTypeName,
+                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
                 tags: Enumerable.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
 
         return Verifier
             .Verify(result)
@@ -135,13 +135,13 @@ public class CodeGeneratorTests
                 serviceTypes: new[] { "Injectio.Tests.IService1" },
                 serviceKey: null,
                 factory: null,
-                duplicate: DuplicateStrategy.Skip,
-                registration: RegistrationStrategy.SelfWithInterfaces,
+                duplicate: KnownTypes.DuplicateStrategySkipShortName,
+                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
                 tags: new[] { "Test", "Big" }
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(CodeGeneratorTests), nameof(CodeGeneratorTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
 
         return Verifier
             .Verify(result)

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Injectio.Generators;
 
 
@@ -7,6 +9,7 @@ namespace Injectio.Generators;
 /// <remarks>
 /// Implements the Jon Skeet suggested implementation of GetHashCode().
 /// </remarks>
+[ExcludeFromCodeCoverage]
 public readonly struct HashCode : IFormattable, IEquatable<HashCode>
 {
     /// <summary>

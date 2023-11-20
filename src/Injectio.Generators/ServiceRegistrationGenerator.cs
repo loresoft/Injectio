@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using Injectio.Attributes;
 using Injectio.Generators.Extensions;
 
 using Microsoft.CodeAnalysis;
@@ -157,7 +156,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             if (registration is not null)
                 registrations.Add(registration);
         }
-        
+
         if (registrations.Count == 0)
             return null;
 
@@ -230,8 +229,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         var serviceTypes = new HashSet<string>();
         string implementationType = null!;
         string? implementationFactory = null;
-        DuplicateStrategy? duplicateStrategy = null;
-        RegistrationStrategy? registrationStrategy = null;
+        string? duplicateStrategy = null;
+        string? registrationStrategy = null;
         var tags = new HashSet<string>();
         string? serviceKey = null;
 
@@ -280,10 +279,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     implementationFactory = value.ToString();
                     break;
                 case "Duplicate":
-                    duplicateStrategy = ParseEnum<DuplicateStrategy>(value);
+                    duplicateStrategy = ResolveDuplicateStrategy(value);
                     break;
                 case "Registration":
-                    registrationStrategy = ParseEnum<RegistrationStrategy>(value);
+                    registrationStrategy = ResolveRegistrationStrategy(value);
                     break;
                 case "Tags":
                     var tagsItems = value
@@ -299,14 +298,14 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         }
 
         // default to ignore duplicate service registrations
-        duplicateStrategy ??= DuplicateStrategy.Skip;
+        duplicateStrategy ??= KnownTypes.DuplicateStrategySkipShortName;
 
         // if implementation and service types not set, default to self with interfaces
         if (registrationStrategy == null
             && implementationType == null
             && serviceTypes.Count == 0)
         {
-            registrationStrategy = RegistrationStrategy.SelfWithInterfaces;
+            registrationStrategy = KnownTypes.RegistrationStrategyImplementedInterfacesShortName;
         }
 
         // no implementation type set, use class attribute is on
@@ -316,7 +315,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         }
 
         // add implemented interfaces
-        bool includeInterfaces = registrationStrategy is RegistrationStrategy.ImplementedInterfaces or RegistrationStrategy.SelfWithInterfaces;
+        bool includeInterfaces = registrationStrategy is KnownTypes.RegistrationStrategyImplementedInterfacesShortName or KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
         if (includeInterfaces)
         {
             foreach (var implementedInterface in classSymbol.AllInterfaces)
@@ -327,7 +326,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         }
 
         // add class attribute is on; default service type if not set
-        bool includeSelf = registrationStrategy is RegistrationStrategy.Self or RegistrationStrategy.SelfWithInterfaces;
+        bool includeSelf = registrationStrategy is KnownTypes.RegistrationStrategySelfShortName or KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
         if (includeSelf || serviceTypes.Count == 0)
             serviceTypes.Add(implementationType!);
 
@@ -337,19 +336,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             serviceTypes,
             serviceKey,
             implementationFactory,
-            duplicateStrategy ?? DuplicateStrategy.Skip,
-            registrationStrategy ?? RegistrationStrategy.SelfWithInterfaces,
+            duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
+            registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
             tags);
-    }
-
-    private static TEnum? ParseEnum<TEnum>(object value) where TEnum : struct
-    {
-        return value switch
-        {
-            int numberValue => Enum.IsDefined(typeof(TEnum), numberValue) ? (TEnum)Enum.ToObject(typeof(TEnum), numberValue) : null,
-            string stringValue => Enum.TryParse<TEnum>(stringValue, out var strategy) ? strategy : null,
-            _ => null
-        };
     }
 
     private static bool IsKnownAttribute(AttributeData attribute, out string serviceLifetime)
@@ -482,6 +471,38 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     }
                 }
             }
+        };
+    }
+
+    private static string ResolveDuplicateStrategy(object? value)
+    {
+        return value switch
+        {
+            int v => v switch
+            {
+                0 => KnownTypes.DuplicateStrategySkipShortName,
+                1 => KnownTypes.DuplicateStrategyReplaceShortName,
+                2 => KnownTypes.DuplicateStrategyAppendShortName,
+                _ => KnownTypes.DuplicateStrategySkipShortName
+            },
+            string text => text,
+            _ => KnownTypes.DuplicateStrategySkipShortName
+        };
+    }
+
+    private static string ResolveRegistrationStrategy(object? value)
+    {
+        return value switch
+        {
+            int v => v switch
+            {
+                0 => KnownTypes.RegistrationStrategySelfShortName,
+                1 => KnownTypes.RegistrationStrategyImplementedInterfacesShortName,
+                2 => KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+                _ => KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            },
+            string text => text,
+            _ => KnownTypes.RegistrationStrategySelfWithInterfacesShortName
         };
     }
 }

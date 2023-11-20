@@ -1,7 +1,9 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Injectio.Generators;
 
+[ExcludeFromCodeCoverage]
 public readonly struct EquatableArray<T> : IReadOnlyCollection<T>, IEquatable<EquatableArray<T>>
     where T : IEquatable<T>
 {

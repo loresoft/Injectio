@@ -1,4 +1,3 @@
-using Injectio.Attributes;
 using Injectio.Generators.Extensions;
 
 namespace Injectio.Generators;
@@ -25,7 +24,7 @@ public static class ServiceRegistrationWriter
             .AppendLine("/// <summary>")
             .AppendLine("/// Extension methods for discovered service registrations")
             .AppendLine("/// </summary>");
-        
+
         codeBuilder
             .AppendLine("public static class DiscoveredServicesExtensions")
             .AppendLine("{")
@@ -238,13 +237,16 @@ public static class ServiceRegistrationWriter
             .AppendLine();
     }
 
-    public static string GetServiceCollectionMethod(DuplicateStrategy duplicateStrategy)
+    public static string GetServiceCollectionMethod(string duplicateStrategy)
     {
         return duplicateStrategy switch
         {
-            DuplicateStrategy.Skip => "TryAdd",
-            DuplicateStrategy.Replace => "Replace",
-            DuplicateStrategy.Append => "Add",
+            KnownTypes.DuplicateStrategySkipShortName => "TryAdd",
+            KnownTypes.DuplicateStrategySkipTypeName => "TryAdd",
+            KnownTypes.DuplicateStrategyReplaceShortName => "Replace",
+            KnownTypes.DuplicateStrategyReplaceTypeName => "Replace",
+            KnownTypes.DuplicateStrategyAppendShortName => "Add",
+            KnownTypes.DuplicateStrategyAppendTypeName => "Add",
             _ => "TryAdd"
         };
     }

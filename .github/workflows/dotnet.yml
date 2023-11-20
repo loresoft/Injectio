@@ -4,6 +4,7 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   BUILD_PATH: '${{github.workspace}}/artifacts'
+  COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
 on:
   push:
@@ -45,7 +46,14 @@ jobs:
       run: 'dotnet build --no-restore --configuration Release -p:Version="${{env.BUILD_VERSION}}" -p:InformationalVersion="${{env.BUILD_VERSION}}+${{github.sha}}"'
 
     - name: Run Test
-      run: dotnet test --no-build --configuration Release --verbosity normal
+      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+
+    - name: Report Coverage
+      if: success()
+      uses: coverallsapp/github-action@v2
+      with:
+        file: "${{github.workspace}}/test/*/TestResults/*/coverage.info"
+        format: lcov
 
     - name: Create Packages
       if: success() && github.event_name != 'pull_request'
