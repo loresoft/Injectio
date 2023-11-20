@@ -52,7 +52,7 @@ jobs:
       if: success()
       uses: coverallsapp/github-action@v2
       with:
-        file: "${{github.workspace}}/test/*/TestResults/*/coverage.info"
+        file: "${{github.workspace}}/tests/*/TestResults/*/coverage.info"
         format: lcov
 
     - name: Create Packages
