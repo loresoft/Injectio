@@ -2,6 +2,12 @@
 
 Source generator that helps register attribute marked services in the dependency injection ServiceCollection
 
+[![Build Project](https://github.com/loresoft/Injectio/actions/workflows/dotnet.yml/badge.svg)](https://github.com/loresoft/Injectio/actions/workflows/dotnet.yml)
+
+[![Coverage Status](https://coveralls.io/repos/github/loresoft/Injectio/badge.svg?branch=main)](https://coveralls.io/github/loresoft/Injectio?branch=main)
+
+[![Injectio](https://img.shields.io/nuget/v/Injectio.svg)](https://www.nuget.org/packages/Injectio/)
+
 [![Source generator](https://raw.githubusercontent.com/loresoft/Injectio/main/media/Injectio.Genertors.png)](https://github.com/loresoft/Injectio)
 
 ## Features
