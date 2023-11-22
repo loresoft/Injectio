@@ -258,6 +258,78 @@ public static class RegistrationModule
     }
 
     [Fact]
+    public Task GenerateRegisterServicesInvalidMethod()
+    {
+        var source = @"
+using Injectio.Attributes;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace Injectio.Sample;
+
+public interface IModuleService
+{
+}
+
+public class ModuleService : IModuleService
+{
+}
+
+public static class RegistrationModule
+{
+    [RegisterServices]
+    public static void Register(IServiceCollection services, string test)
+    {
+        services.TryAddTransient<IModuleService, ModuleService>();
+    }
+}
+";
+
+        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        diagnostics.Should().NotBeEmpty();
+        diagnostics[0].Id.Should().Be("SD0010");
+
+        return Task.CompletedTask;
+    }
+
+    [Fact]
+    public Task GenerateRegisterServicesInvalidService()
+    {
+        var source = @"
+using Injectio.Attributes;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace Injectio.Sample;
+
+public interface IModuleService
+{
+}
+
+public class ModuleService : IModuleService
+{
+}
+
+public static class RegistrationModule
+{
+    [RegisterServices]
+    public static void Register(string test)
+    {
+        services.TryAddTransient<IModuleService, ModuleService>();
+    }
+}
+";
+
+        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        diagnostics.Should().NotBeEmpty();
+        diagnostics[0].Id.Should().Be("SD0011");
+
+        return Task.CompletedTask;
+    }
+
+    [Fact]
     public Task GenerateRegisterSingletonFactory()
     {
         var source = @"
@@ -351,6 +423,33 @@ public class ServiceTag : IServiceTag
             .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
+#if NET7_0_OR_GREATER
+    [Fact]
+    public Task GenerateRegisterSingletonGeneric()
+    {
+        var source = @"
+using Injectio.Attributes;
+
+namespace Injectio.Sample;
+
+public interface IService { }
+
+[RegisterSingleton<IService, SingletonService>(Duplicate = DuplicateStrategy.Replace)]
+public class SingletonService : IService
+{ }
+";
+
+        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        diagnostics.Should().BeEmpty();
+
+        return Verifier
+            .Verify(output)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
+    }
+#endif
+
     [Fact]
     public Task GenerateRegisterSingletonServiceKeys()
     {
@@ -361,24 +460,24 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Injectio.Sample;
 
-[RegisterSingleton<IServiceKeyed>(ServiceKey = ""Alpha"")]
+[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Alpha"")]
 public class ServiceAlphaKeyed : IServiceKeyed
 { }
 
-[RegisterSingleton<IServiceKeyed>(ServiceKey = ""Beta"")]
+[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Beta"")]
 public class ServiceBetaKeyed : IServiceKeyed
 { }
 
-[RegisterSingleton<IServiceKeyed>(ServiceKey = ServiceType.Alpha)]
+[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ServiceType.Alpha)]
 public class ServiceAlphaTypeKeyed : IServiceKeyed
 { }
 
-[RegisterSingleton<IServiceKeyed>(ServiceKey = ServiceType.Beta)]
+[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ServiceType.Beta)]
 public class ServiceBetaTypeKeyed : IServiceKeyed
 { }
 
-[RegisterSingleton<IServiceKeyed>(ServiceKey = ""Charlie"", Factory = nameof(ServiceFactory))]
-[RegisterSingleton<IServiceKeyed>(ServiceKey = ""Delta"", Factory = nameof(ServiceFactory))]
+[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Charlie"", Factory = nameof(ServiceFactory))]
+[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Delta"", Factory = nameof(ServiceFactory))]
 public class ServiceFactoryKeyed : IServiceKeyed
 {
     public ServiceFactoryKeyed(object? serviceKey)
@@ -413,7 +512,6 @@ public enum ServiceType
             .UseDirectory("Snapshots")
             .ScrubLinesContaining("GeneratedCodeAttribute");
     }
-
 
 
     private static (ImmutableArray<Diagnostic> Diagnostics, string Output) GetGeneratedOutput<T>(string source)

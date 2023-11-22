@@ -179,7 +179,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             if (!hasServiceCollection)
             {
                 var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.InvalidModuleParameter,
+                    DiagnosticDescriptors.InvalidServiceCollectionParameter,
                     methodDeclaration.GetLocation(),
                     parameterSymbol.Name,
                     methodName
@@ -243,12 +243,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 var typeParameter = attributeClass.TypeParameters[index];
                 var typeArgument = attributeClass.TypeArguments[index];
 
-                if (typeParameter.Name == "TService")
+                if (typeParameter.Name == "TService" || index == 0)
                 {
                     var service = typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     serviceTypes.Add(service);
                 }
-                else if (typeParameter.Name == "TImplementation")
+                else if (typeParameter.Name == "TImplementation" || index == 1)
                 {
                     implementationType = typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 }
