@@ -37,6 +37,7 @@ namespace Microsoft.Extensions.DependencyInjection
                         global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                     )
                 );
+
             }
 
             return serviceCollection;
