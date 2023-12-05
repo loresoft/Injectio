@@ -27,6 +27,14 @@ namespace Microsoft.Extensions.DependencyInjection
                 )
             );
 
+            global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
+                serviceCollection,
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
+                    typeof(global::Injectio.Sample.SingletonService),
+                    typeof(global::Injectio.Sample.SingletonService), 
+                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped
+                )
+            );
             return serviceCollection;
         }
     }

@@ -305,7 +305,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             && implementationType == null
             && serviceTypes.Count == 0)
         {
-            registrationStrategy = KnownTypes.RegistrationStrategyImplementedInterfacesShortName;
+            registrationStrategy = KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
         }
 
         // no implementation type set, use class attribute is on
