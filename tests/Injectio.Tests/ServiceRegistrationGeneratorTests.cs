@@ -18,7 +18,6 @@ using Xunit;
 
 namespace Injectio.Tests;
 
-[UsesVerify]
 public class ServiceRegistrationGeneratorTests
 {
     [Fact]
