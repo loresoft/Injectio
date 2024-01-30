@@ -219,7 +219,7 @@ public class RegistrationModule
     [RegisterServices]
     public static void Register(IServiceCollection services)
     {
-        // add configuration options
+        // add and bind configuration options, Microsoft.Extensions.Configuration.Binder
         services
             .AddOptions<PollingOption>()
             .Configure<IConfiguration>((settings, configuration) => configuration
