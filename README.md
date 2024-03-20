@@ -245,6 +245,9 @@ Override the extension method name by using the `InjectioName` MSBuild property.
 <PropertyGroup>
   <InjectioName>Library</InjectioName>
 </PropertyGroup>
+<ItemGroup>
+ <CompilerVisibleProperty Include="InjectioName" />
+</ItemGroup>
 ```
 
 ```c#
