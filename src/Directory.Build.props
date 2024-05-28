@@ -14,14 +14,25 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/loresoft/Injectio</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <NoWarn>1591</NoWarn>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
-  <PropertyGroup>
+  <PropertyGroup Label="Debug">
+    <DebugType>embedded</DebugType>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Options">
+    <DefaultLanguage>en-US</DefaultLanguage>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>

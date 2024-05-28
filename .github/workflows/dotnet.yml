@@ -3,7 +3,7 @@ name: Build Project
 env:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-  BUILD_PATH: '${{github.workspace}}/artifacts'
+  BUILD_PATH: "${{github.workspace}}/artifacts"
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
 on:
@@ -12,7 +12,7 @@ on:
       - main
       - develop
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
       - main
@@ -20,51 +20,50 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Install .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Install .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Calculate Version
-      run: |
-        dotnet tool update -g minver-cli
-        echo "BUILD_VERSION=$(minver -v e -t v)" >> $GITHUB_ENV
+      - name: Calculate Version
+        run: |
+          dotnet tool update -g minver-cli
+          echo "BUILD_VERSION=$(minver -v e -t v)" >> $GITHUB_ENV
 
-    - name: Restore Dependencies
-      run: dotnet restore
+      - name: Restore Dependencies
+        run: dotnet restore
 
-    - name: Build Solution
-      run: 'dotnet build --no-restore --configuration Release -p:Version="${{env.BUILD_VERSION}}" -p:InformationalVersion="${{env.BUILD_VERSION}}+${{github.sha}}"'
+      - name: Build Solution
+        run: 'dotnet build --no-restore --configuration Release -p:Version="${{env.BUILD_VERSION}}" -p:InformationalVersion="${{env.BUILD_VERSION}}+${{github.sha}}"'
 
-    - name: Run Test
-      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+      - name: Run Test
+        run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 
-    - name: Report Coverage
-      if: success()
-      uses: coverallsapp/github-action@v2
-      with:
-        file: "${{github.workspace}}/tests/*/TestResults/*/coverage.info"
-        format: lcov
+      - name: Report Coverage
+        if: success()
+        uses: coverallsapp/github-action@v2
+        with:
+          file: "${{github.workspace}}/tests/*/TestResults/*/coverage.info"
+          format: lcov
 
-    - name: Create Packages
-      if: success() && github.event_name != 'pull_request'
-      run: 'nuget pack Injectio.nuspec -Version "${{env.BUILD_VERSION}}" -OutputDirectory "${{env.BUILD_PATH}}" -p Configuration=Release'
+      - name: Create Packages
+        if: success() && github.event_name != 'pull_request'
+        run: 'nuget pack Injectio.nuspec -Version "${{env.BUILD_VERSION}}" -OutputDirectory "${{env.BUILD_PATH}}" -p Configuration=Release'
 
-    - name: Upload Packages
-      if: success() && github.event_name != 'pull_request'
-      uses: actions/upload-artifact@v4
-      with:
-        name: packages
-        path: '${{env.BUILD_PATH}}'
+      - name: Upload Packages
+        if: success() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: "${{env.BUILD_PATH}}"
 
   deploy:
     runs-on: ubuntu-latest
@@ -72,30 +71,29 @@ jobs:
     if: success() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
 
     steps:
-    - name: Download Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: packages
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: packages
 
-    - name: Publish Packages GitHub
-      run: |
-        for package in $(find -name "*.nupkg"); do
-          echo "${0##*/}": Pushing $package...
-          dotnet nuget push $package --source https://nuget.pkg.github.com/loresoft/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
-        done
+      - name: Publish Packages GitHub
+        run: |
+          for package in $(find -name "*.nupkg"); do
+            echo "${0##*/}": Pushing $package...
+            dotnet nuget push $package --source https://nuget.pkg.github.com/loresoft/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+          done
 
-    - name: Publish Packages feedz
-      run: |
-        for package in $(find -name "*.nupkg"); do
-          echo "${0##*/}": Pushing $package...
-          dotnet nuget push $package --source https://f.feedz.io/loresoft/open/nuget/index.json --api-key ${{ secrets.FEEDDZ_KEY }} --skip-duplicate
-        done
+      - name: Publish Packages feedz
+        run: |
+          for package in $(find -name "*.nupkg"); do
+            echo "${0##*/}": Pushing $package...
+            dotnet nuget push $package --source https://f.feedz.io/loresoft/open/nuget/index.json --api-key ${{ secrets.FEEDDZ_KEY }} --skip-duplicate
+          done
 
-    - name: Publish Packages Nuget
-      if: startsWith(github.ref, 'refs/tags/v')
-      run: |
-        for package in $(find -name "*.nupkg"); do
-          echo "${0##*/}": Pushing $package...
-          dotnet nuget push $package --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
-        done
-
+      - name: Publish Packages Nuget
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          for package in $(find -name "*.nupkg"); do
+            echo "${0##*/}": Pushing $package...
+            dotnet nuget push $package --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
+          done
