@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
+# 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{C2680CC3-2014-44BE-98B2-D4431437E0A1}"
 	ProjectSection(SolutionItems) = preProject
+		.github\dependabot.yml = .github\dependabot.yml
 		src\Directory.Build.props = src\Directory.Build.props
 		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
-		Injectio.nuspec = Injectio.nuspec
 		README.md = README.md
 	EndProjectSection
 EndProject

@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis;
 namespace Injectio.Generators;
 
 [ExcludeFromCodeCoverage]
-internal class DiagnosticDescriptors
+internal static class DiagnosticDescriptors
 {
     public static DiagnosticDescriptor InvalidModuleParameter => new(
         id: "SD0010",

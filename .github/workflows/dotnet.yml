@@ -3,6 +3,8 @@ name: Build Project
 env:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_ENVIRONMENT: github
+  ASPNETCORE_ENVIRONMENT: github
   BUILD_PATH: "${{github.workspace}}/artifacts"
   COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
@@ -33,19 +35,14 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Calculate Version
-        run: |
-          dotnet tool update -g minver-cli
-          echo "BUILD_VERSION=$(minver -v e -t v)" >> $GITHUB_ENV
-
       - name: Restore Dependencies
         run: dotnet restore
 
       - name: Build Solution
-        run: 'dotnet build --no-restore --configuration Release -p:Version="${{env.BUILD_VERSION}}" -p:InformationalVersion="${{env.BUILD_VERSION}}+${{github.sha}}"'
+        run: dotnet build --no-restore --configuration Release
 
       - name: Run Test
-        run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+        run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 
       - name: Report Coverage
         if: success()
@@ -56,7 +53,7 @@ jobs:
 
       - name: Create Packages
         if: success() && github.event_name != 'pull_request'
-        run: 'nuget pack Injectio.nuspec -Version "${{env.BUILD_VERSION}}" -OutputDirectory "${{env.BUILD_PATH}}" -p Configuration=Release'
+        run: dotnet pack --configuration Release --no-build --output "${{env.BUILD_PATH}}"
 
       - name: Upload Packages
         if: success() && github.event_name != 'pull_request'
