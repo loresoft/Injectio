@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\Injectio.Generators\bin\$(Configuration)\netstandard2.0\Injectio.Generators.dll" PackagePath="analyzers\dotnet\roslyn4.3\cs" Pack="true" Visible="false" />
-    <None Include="..\Injectio.Generators\bin\$(Configuration)\netstandard2.0\Injectio.Generators.props" PackagePath="analyzers\dotnet\roslyn4.3\cs" Pack="true" Visible="false" />
+    <None Include="..\Injectio.Generators\bin\$(Configuration)\netstandard2.0\Injectio.Generators.dll" PackagePath="analyzers\dotnet\roslyn4.4\cs" Pack="true" Visible="false" />
+    <None Include="..\Injectio.Generators\Injectio.targets" PackagePath="build" Pack="true" Visible="false" />
   </ItemGroup>
 </Project>

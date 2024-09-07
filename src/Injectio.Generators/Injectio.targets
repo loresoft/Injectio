@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="InjectioName" />
+    <PackageReference Update="Injectio" PrivateAssets="all" PackTransitive="false" />
+  </ItemGroup>
+</Project>
