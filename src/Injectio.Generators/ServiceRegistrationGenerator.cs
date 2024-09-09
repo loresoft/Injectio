@@ -25,13 +25,13 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         // Emit the diagnostics, if needed
         var diagnostics = pipeline
             .Select(static (item, _) => item!.Diagnostics)
-            .Where(static item => item.Count > 0);
+            .Where(static item => item?.Count > 0);
 
         context.RegisterSourceOutput(diagnostics, ReportDiagnostic);
 
         // select contexts with registrations
         var registrations = pipeline
-            .Where(static context => context!.ServiceRegistrations.Count > 0 || context.ModuleRegistrations.Count > 0)
+            .Where(static context => context?.ServiceRegistrations?.Count > 0 || context?.ModuleRegistrations?.Count > 0)
             .Collect();
 
         // include config options
@@ -41,8 +41,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         var methodName = context.AnalyzerConfigOptionsProvider
             .Select(static (c, _) =>
             {
-                c.GlobalOptions.TryGetValue("build_property.injectioname", out var methodName);
-                return methodName;
+                c.GlobalOptions.TryGetValue("build_property.InjectioName", out var methodName);
+                c.GlobalOptions.TryGetValue("build_property.InjectioInternal", out var methodInternal);
+                return new MethodOptions(methodName, methodInternal);
             });
 
         var options = assemblyName.Combine(methodName);
@@ -53,47 +54,53 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private void ExecuteGeneration(
         SourceProductionContext sourceContext,
-        (ImmutableArray<ServiceRegistrationContext?> Registrations, (string? AssemblyName, string? MethodName) Options) source)
+        (ImmutableArray<ServiceRegistrationContext?> Registrations, (string? AssemblyName, MethodOptions? MethodOptions) Options) source)
     {
         var serviceRegistrations = source.Registrations
-            .SelectMany(m => m!.ServiceRegistrations)
+            .SelectMany(m => m?.ServiceRegistrations ?? Array.Empty<ServiceRegistration>())
             .Where(m => m is not null)
             .ToArray();
 
         var moduleRegistrations = source.Registrations
-            .SelectMany(m => m!.ModuleRegistrations)
+            .SelectMany(m => m?.ModuleRegistrations ?? Array.Empty<ModuleRegistration>())
             .Where(m => m is not null)
             .ToArray();
 
         // compute extension method name
-        var methodName = source.Options.MethodName;
+        var methodName = source.Options.MethodOptions?.Name;
         if (methodName.IsNullOrWhiteSpace())
             methodName = Regex.Replace(source.Options.AssemblyName, "\\W", "");
+
+        var methodInternal = source.Options.MethodOptions?.Internal;
 
         // generate registration method
         var result = ServiceRegistrationWriter.GenerateExtensionClass(
             moduleRegistrations,
             serviceRegistrations,
             source.Options.AssemblyName,
-            methodName);
+            methodName,
+            methodInternal);
 
         // add source file
         sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
     }
 
-    private static void ReportDiagnostic(SourceProductionContext context, EquatableArray<Diagnostic> diagnostics)
+    private static void ReportDiagnostic(SourceProductionContext context, EquatableArray<Diagnostic>? diagnostics)
     {
+        if (diagnostics == null)
+            return;
+
         foreach (var diagnostic in diagnostics)
             context.ReportDiagnostic(diagnostic);
     }
 
     private static bool SyntacticPredicate(SyntaxNode syntaxNode, CancellationToken cancellationToken)
     {
-        return syntaxNode is ClassDeclarationSyntax { AttributeLists.Count: > 0 } classDeclaration
+        return (syntaxNode is ClassDeclarationSyntax { AttributeLists.Count: > 0 } classDeclaration
                    && !classDeclaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
-                   && !classDeclaration.Modifiers.Any(SyntaxKind.StaticKeyword)
-               || syntaxNode is MemberDeclarationSyntax { AttributeLists.Count: > 0 } memberDeclaration
-                   && !memberDeclaration.Modifiers.Any(SyntaxKind.AbstractKeyword);
+                   && !classDeclaration.Modifiers.Any(SyntaxKind.StaticKeyword))
+               || (syntaxNode is MemberDeclarationSyntax { AttributeLists.Count: > 0 } memberDeclaration
+                   && !memberDeclaration.Modifiers.Any(SyntaxKind.AbstractKeyword));
     }
 
     private static ServiceRegistrationContext? SemanticTransform(GeneratorSyntaxContext context, CancellationToken cancellationToken)
@@ -127,13 +134,13 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         var registration = new ModuleRegistration
         (
-            className: methodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            methodName: methodSymbol.Name,
-            isStatic: methodSymbol.IsStatic,
-            hasTagCollection: hasTagCollection
+            ClassName: methodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            MethodName: methodSymbol.Name,
+            IsStatic: methodSymbol.IsStatic,
+            HasTagCollection: hasTagCollection
         );
 
-        return new ServiceRegistrationContext(moduleRegistrations: new[] { registration });
+        return new ServiceRegistrationContext(ModuleRegistrations: new[] { registration });
     }
 
     private static ServiceRegistrationContext? SemanticTransformClass(GeneratorSyntaxContext context)
@@ -160,10 +167,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (registrations.Count == 0)
             return null;
 
-        return new ServiceRegistrationContext(serviceRegistrations: registrations);
+        return new ServiceRegistrationContext(ServiceRegistrations: registrations.ToArray());
     }
 
-    private static (IReadOnlyCollection<Diagnostic> diagnostics, bool hasServiceCollection, bool hasTagCollection) ValidateMethod(MethodDeclarationSyntax methodDeclaration, IMethodSymbol methodSymbol)
+    private static (EquatableArray<Diagnostic> diagnostics, bool hasServiceCollection, bool hasTagCollection) ValidateMethod(MethodDeclarationSyntax methodDeclaration, IMethodSymbol methodSymbol)
     {
         var diagnostics = new List<Diagnostic>();
         var hasServiceCollection = false;
@@ -206,7 +213,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         }
 
         if (methodSymbol.Parameters.Length is 1 or 2)
-            return (diagnostics, hasServiceCollection, hasTagCollection);
+            return (diagnostics.ToArray(), hasServiceCollection, hasTagCollection);
 
         // invalid parameter count
         var parameterDiagnostic = Diagnostic.Create(
@@ -216,7 +223,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         );
         diagnostics.Add(parameterDiagnostic);
 
-        return (diagnostics, hasServiceCollection, hasTagCollection);
+        return (diagnostics.ToArray(), hasServiceCollection, hasTagCollection);
     }
 
     private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
@@ -333,12 +340,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return new ServiceRegistration(
             serviceLifetime,
             implementationType!,
-            serviceTypes,
+            serviceTypes.ToArray(),
             serviceKey,
             implementationFactory,
             duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
             registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-            tags);
+            tags.ToArray());
     }
 
     private static bool IsKnownAttribute(AttributeData attribute, out string serviceLifetime)
@@ -373,10 +380,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ContainingNamespace:
             {
                 Name: "Attributes",
-                ContainingNamespace:
-                {
-                    Name: "Injectio"
-                }
+                ContainingNamespace.Name: "Injectio"
             }
         };
     }
@@ -389,10 +393,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ContainingNamespace:
             {
                 Name: "Attributes",
-                ContainingNamespace:
-                {
-                    Name: "Injectio"
-                }
+                ContainingNamespace.Name: "Injectio"
             }
         };
     }
@@ -405,10 +406,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ContainingNamespace:
             {
                 Name: "Attributes",
-                ContainingNamespace:
-                {
-                    Name: "Injectio"
-                }
+                ContainingNamespace.Name: "Injectio"
             }
         };
     }
@@ -421,10 +419,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ContainingNamespace:
             {
                 Name: "Attributes",
-                ContainingNamespace:
-                {
-                    Name: "Injectio"
-                }
+                ContainingNamespace.Name: "Injectio"
             }
         };
     }
@@ -440,10 +435,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 ContainingNamespace:
                 {
                     Name: "Extensions",
-                    ContainingNamespace:
-                    {
-                        Name: "Microsoft"
-                    }
+                    ContainingNamespace.Name: "Microsoft"
                 }
             }
         };
@@ -465,10 +457,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 ContainingNamespace:
                 {
                     Name: "Collections",
-                    ContainingNamespace:
-                    {
-                        Name: "System"
-                    }
+                    ContainingNamespace.Name: "System"
                 }
             }
         };

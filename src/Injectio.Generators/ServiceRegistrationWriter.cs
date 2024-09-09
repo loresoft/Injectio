@@ -8,8 +8,9 @@ public static class ServiceRegistrationWriter
     public static string GenerateExtensionClass(
         IReadOnlyList<ModuleRegistration> moduleRegistrations,
         IReadOnlyList<ServiceRegistration> serviceRegistrations,
-        string assemblyName,
-        string methodName)
+        string? assemblyName,
+        string? methodName,
+        string? methodInternal)
     {
         var codeBuilder = new IndentedStringBuilder();
         codeBuilder
@@ -30,7 +31,7 @@ public static class ServiceRegistrationWriter
             .AppendLine("{")
             .IncrementIndent()
             .AppendLine("/// <summary>")
-            .AppendLine($"/// Adds discovered services from {assemblyName} to the specified service collection")
+            .AppendLine($"/// Adds discovered services from {assemblyName ?? string.Empty} to the specified service collection")
             .AppendLine("/// </summary>")
             .AppendLine("/// <param name=\"serviceCollection\">The service collection.</param>")
             .AppendLine("/// <param name=\"tags\">The service registration tags to include.</param>")
@@ -40,9 +41,10 @@ public static class ServiceRegistrationWriter
             .Append("\", \"")
             .Append(ThisAssembly.InformationalVersion)
             .AppendLine("\")]")
-            .Append("public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection")
+            .Append(string.Equals(methodInternal, "true") ? "internal" : "public")
+            .Append(" static global::Microsoft.Extensions.DependencyInjection.IServiceCollection")
             .Append(" Add")
-            .Append(methodName)
+            .Append(methodName ?? "InjectioService")
             .AppendLine("(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection, params string[]? tags)")
             .AppendLine("{")
             .IncrementIndent();

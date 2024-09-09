@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,18 +22,18 @@ public class ServiceRegistrationWriterTests
         var registrations = new List<ServiceRegistration>
         {
             new (
-                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
-                implementationType: "Injectio.Tests.Service1",
-                serviceTypes: new[] { "Injectio.Tests.IService1" },
-                serviceKey: null,
-                factory: null,
-                duplicate: KnownTypes.DuplicateStrategySkipShortName,
-                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                tags: Enumerable.Empty<string>()
+                Lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+                ImplementationType: "Injectio.Tests.Service1",
+                ServiceTypes: new[] { "Injectio.Tests.IService1" },
+                ServiceKey: null,
+                Factory: null,
+                Duplicate: KnownTypes.DuplicateStrategySkipShortName,
+                Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+                Tags: Array.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -47,22 +48,22 @@ public class ServiceRegistrationWriterTests
         var registrations = new List<ServiceRegistration>
         {
             new (
-                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
-                implementationType: "Injectio.Tests.ServiceMultiple",
-                serviceTypes: new[]                 {
+                Lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+                ImplementationType: "Injectio.Tests.ServiceMultiple",
+                ServiceTypes: new[]                 {
                     "Injectio.Tests.ServiceMultiple",
                     "Injectio.Tests.IService1",
                     "Injectio.Tests.IService2",
                 },
-                serviceKey: null,
-                factory: null,
-                duplicate: KnownTypes.DuplicateStrategySkipShortName,
-                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                tags: Enumerable.Empty<string>()
+                ServiceKey: null,
+                Factory: null,
+                Duplicate: KnownTypes.DuplicateStrategySkipShortName,
+                Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+                Tags : Array.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -77,18 +78,18 @@ public class ServiceRegistrationWriterTests
         var registrations = new List<ServiceRegistration>
         {
             new (
-                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped",
-                implementationType: "Injectio.Tests.Service1",
-                serviceTypes: new[] { "Injectio.Tests.IService1" },
-                serviceKey: null,
-                factory: null,
-                duplicate: KnownTypes.DuplicateStrategyAppendShortName,
-                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                tags: Enumerable.Empty<string>()
+                Lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped",
+                ImplementationType: "Injectio.Tests.Service1",
+                ServiceTypes: new[] { "Injectio.Tests.IService1" },
+                ServiceKey: null,
+                Factory: null,
+                Duplicate: KnownTypes.DuplicateStrategyAppendShortName,
+                Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+                Tags : Array.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -103,18 +104,18 @@ public class ServiceRegistrationWriterTests
         var registrations = new List<ServiceRegistration>
         {
             new (
-                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient",
-                implementationType: "Injectio.Tests.Service1",
-                serviceTypes: new[] { "Injectio.Tests.IService1" },
-                serviceKey: null,
-                factory: null,
-                duplicate: KnownTypes.DuplicateStrategyReplaceTypeName,
-                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                tags: Enumerable.Empty<string>()
+                Lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient",
+                ImplementationType: "Injectio.Tests.Service1",
+                ServiceTypes: new[] { "Injectio.Tests.IService1" },
+                ServiceKey: null,
+                Factory: null,
+                Duplicate: KnownTypes.DuplicateStrategyReplaceTypeName,
+                Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+                Tags : Array.Empty<string>()
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -129,18 +130,18 @@ public class ServiceRegistrationWriterTests
         var registrations = new List<ServiceRegistration>
         {
             new (
-                lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
-                implementationType: "Injectio.Tests.Service1",
-                serviceTypes: new[] { "Injectio.Tests.IService1" },
-                serviceKey: null,
-                factory: null,
-                duplicate: KnownTypes.DuplicateStrategySkipShortName,
-                registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                tags: new[] { "Test", "Big" }
+                Lifetime: "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+                ImplementationType: "Injectio.Tests.Service1",
+                ServiceTypes: new[] { "Injectio.Tests.IService1" },
+                ServiceKey: null,
+                Factory: null,
+                Duplicate: KnownTypes.DuplicateStrategySkipShortName,
+                Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+                Tags: new[] { "Test", "Big" }
             )
         };
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests));
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)

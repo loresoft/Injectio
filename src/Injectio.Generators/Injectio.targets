@@ -1,5 +1,6 @@
 <Project>
   <ItemGroup>
     <CompilerVisibleProperty Include="InjectioName" />
+    <CompilerVisibleProperty Include="InjectioInternal" />
   </ItemGroup>
 </Project>
