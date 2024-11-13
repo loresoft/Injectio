@@ -228,7 +228,7 @@ public static class ServiceRegistrationWriter
         }
 
         codeBuilder
-            .AppendLine(", ")
+            .AppendLine(",")
             .Append("global::")
             .Append(serviceRegistration.Lifetime)
             .AppendLine()
