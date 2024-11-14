@@ -22,7 +22,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 serviceCollection,
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
                     typeof(global::Injectio.Sample.IService1),
-                    typeof(global::Injectio.Sample.SingletonService), 
+                    typeof(global::Injectio.Sample.SingletonService),
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );
@@ -31,7 +31,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 serviceCollection,
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
                     typeof(global::Injectio.Sample.IService2),
-                    typeof(global::Injectio.Sample.SingletonService), 
+                    typeof(global::Injectio.Sample.SingletonService),
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );

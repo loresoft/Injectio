@@ -24,7 +24,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     serviceCollection,
                     global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
                         typeof(global::Injectio.Sample.IServiceTag),
-                        typeof(global::Injectio.Sample.ServiceTag), 
+                        typeof(global::Injectio.Sample.ServiceTag),
                         global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                     )
                 );
@@ -33,7 +33,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     serviceCollection,
                     global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
                         typeof(global::Injectio.Sample.ServiceTag),
-                        typeof(global::Injectio.Sample.ServiceTag), 
+                        typeof(global::Injectio.Sample.ServiceTag),
                         global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                     )
                 );

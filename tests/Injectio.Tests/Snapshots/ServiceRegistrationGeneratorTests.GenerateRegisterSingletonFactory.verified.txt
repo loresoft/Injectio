@@ -22,7 +22,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 serviceCollection,
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
                     typeof(global::Injectio.Sample.IFactoryService),
-                    global::Injectio.Sample.FactoryService.ServiceFactory, 
+                    global::Injectio.Sample.FactoryService.ServiceFactory,
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient
                 )
             );

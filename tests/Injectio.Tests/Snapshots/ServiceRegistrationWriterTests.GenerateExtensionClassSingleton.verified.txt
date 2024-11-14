@@ -22,7 +22,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 serviceCollection,
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
                     typeof(global::Injectio.Tests.IService1),
-                    typeof(global::Injectio.Tests.Service1), 
+                    typeof(global::Injectio.Tests.Service1),
                     global::global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );

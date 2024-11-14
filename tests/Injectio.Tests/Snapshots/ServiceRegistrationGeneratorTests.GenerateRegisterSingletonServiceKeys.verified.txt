@@ -23,7 +23,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
                     typeof(global::IServiceKeyed),
                     "Alpha",
-                    typeof(global::Injectio.Sample.ServiceAlphaKeyed), 
+                    typeof(global::Injectio.Sample.ServiceAlphaKeyed),
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );
@@ -33,7 +33,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
                     typeof(global::IServiceKeyed),
                     "Beta",
-                    typeof(global::Injectio.Sample.ServiceBetaKeyed), 
+                    typeof(global::Injectio.Sample.ServiceBetaKeyed),
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );
@@ -43,7 +43,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
                     typeof(global::IServiceKeyed),
                     Injectio.Sample.ServiceType.Alpha,
-                    typeof(global::Injectio.Sample.ServiceAlphaTypeKeyed), 
+                    typeof(global::Injectio.Sample.ServiceAlphaTypeKeyed),
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );
@@ -53,7 +53,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
                     typeof(global::IServiceKeyed),
                     Injectio.Sample.ServiceType.Beta,
-                    typeof(global::Injectio.Sample.ServiceBetaTypeKeyed), 
+                    typeof(global::Injectio.Sample.ServiceBetaTypeKeyed),
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );
@@ -63,7 +63,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
                     typeof(global::IServiceKeyed),
                     "Charlie",
-                    global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory, 
+                    global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory,
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );
@@ -73,7 +73,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
                     typeof(global::IServiceKeyed),
                     "Delta",
-                    global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory, 
+                    global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory,
                     global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
                 )
             );
