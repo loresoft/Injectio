@@ -17,6 +17,8 @@ updates:
     open-pull-requests-limit: 10
     ignore:
       - dependency-name: "Microsoft.CodeAnalysis.CSharp"
+      - dependency-name: FluentAssertions
+        versions: [">=8.0.0"]      
     groups:
       Azure:
         patterns:
