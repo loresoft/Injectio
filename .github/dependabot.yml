@@ -18,7 +18,7 @@ updates:
     ignore:
       - dependency-name: "Microsoft.CodeAnalysis.CSharp"
       - dependency-name: FluentAssertions
-        versions: [">=8.0.0"]      
+        versions: [">=8.0.0"]
     groups:
       Azure:
         patterns:
