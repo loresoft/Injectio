@@ -138,3 +138,10 @@ public enum ServiceType
     Charlie,
     Delta
 }
+
+[RegisterScoped]
+public class Service : IService<Input, string?>;
+public class Input : IInput<string?>;
+
+public interface IService<TInput, TOutput> where TInput : IInput<TOutput>;
+public interface IInput<TOutput>;

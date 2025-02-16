@@ -14,6 +14,11 @@ namespace Injectio.Generators;
 [Generator]
 public class ServiceRegistrationGenerator : IIncrementalGenerator
 {
+    private static readonly SymbolDisplayFormat _fullyQualifiedNullableFormat =
+        SymbolDisplayFormat.FullyQualifiedFormat.AddMiscellaneousOptions(
+            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier
+        );
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var pipeline = context.SyntaxProvider.CreateSyntaxProvider(
@@ -134,7 +139,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         var registration = new ModuleRegistration
         (
-            ClassName: methodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            ClassName: methodSymbol.ContainingType.ToDisplayString(_fullyQualifiedNullableFormat),
             MethodName: methodSymbol.Name,
             IsStatic: methodSymbol.IsStatic,
             HasTagCollection: hasTagCollection
@@ -252,12 +257,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
                 if (typeParameter.Name == "TService" || index == 0)
                 {
-                    var service = typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    var service = typeArgument.ToDisplayString(_fullyQualifiedNullableFormat);
                     serviceTypes.Add(service);
                 }
                 else if (typeParameter.Name == "TImplementation" || index == 1)
                 {
-                    implementationType = typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    implementationType = typeArgument.ToDisplayString(_fullyQualifiedNullableFormat);
                 }
             }
         }
@@ -318,7 +323,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         // no implementation type set, use class attribute is on
         if (implementationType.IsNullOrWhiteSpace())
         {
-            implementationType = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            implementationType = classSymbol.ToDisplayString(_fullyQualifiedNullableFormat);
         }
 
         // add implemented interfaces
@@ -327,7 +332,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         {
             foreach (var implementedInterface in classSymbol.AllInterfaces)
             {
-                var interfaceName = implementedInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var interfaceName = implementedInterface.ToDisplayString(_fullyQualifiedNullableFormat);
                 serviceTypes.Add(interfaceName);
             }
         }
