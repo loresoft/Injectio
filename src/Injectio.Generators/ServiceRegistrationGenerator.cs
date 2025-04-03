@@ -101,11 +101,21 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private static bool SyntacticPredicate(SyntaxNode syntaxNode, CancellationToken cancellationToken)
     {
-        return (syntaxNode is ClassDeclarationSyntax { AttributeLists.Count: > 0 } classDeclaration
-                   && !classDeclaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
-                   && !classDeclaration.Modifiers.Any(SyntaxKind.StaticKeyword))
-               || (syntaxNode is MemberDeclarationSyntax { AttributeLists.Count: > 0 } memberDeclaration
-                   && !memberDeclaration.Modifiers.Any(SyntaxKind.AbstractKeyword));
+        return syntaxNode switch
+        {
+            ClassDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
+                !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
+                && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword),
+
+            RecordDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
+                !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
+                && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword),
+
+            MemberDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
+                !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword),
+
+            _ => false,
+        };
     }
 
     private static ServiceRegistrationContext? SemanticTransform(GeneratorSyntaxContext context, CancellationToken cancellationToken)
@@ -113,6 +123,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return context.Node switch
         {
             ClassDeclarationSyntax => SemanticTransformClass(context),
+            RecordDeclarationSyntax => SemanticTransformClass(context),
             MethodDeclarationSyntax => SemanticTransformMethod(context),
             _ => null
         };
@@ -150,10 +161,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private static ServiceRegistrationContext? SemanticTransformClass(GeneratorSyntaxContext context)
     {
-        if (context.Node is not ClassDeclarationSyntax classSyntax)
+        if (context.Node is not (TypeDeclarationSyntax declaration and (ClassDeclarationSyntax or RecordDeclarationSyntax)))
             return null;
 
-        var classSymbol = context.SemanticModel.GetDeclaredSymbol(classSyntax);
+        var classSymbol = context.SemanticModel.GetDeclaredSymbol(declaration);
         if (classSymbol is null)
             return null;
 
@@ -332,6 +343,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         {
             foreach (var implementedInterface in classSymbol.AllInterfaces)
             {
+                // This interface is typically not injected into services and, more specifically, record types auto-implement it.
+                if(implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>") continue;
                 var interfaceName = implementedInterface.ToDisplayString(_fullyQualifiedNullableFormat);
                 serviceTypes.Add(interfaceName);
             }
