@@ -18,6 +18,7 @@ var factory1 = provider.GetRequiredService<IFactoryService1>();
 var module = provider.GetRequiredService<IModuleService>();
 
 var generic = provider.GetRequiredService<IOpenGeneric<string>>();
+var generic2 = provider.GetRequiredService<IOpenGeneric2<string>>();
 var tagService = provider.GetService<IServiceTag>();
 
 var alpaService = provider.GetKeyedService<IServiceKeyed>("Alpha");

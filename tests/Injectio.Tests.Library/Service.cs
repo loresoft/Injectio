@@ -79,6 +79,15 @@ public class OpenGeneric<T> : IOpenGeneric<T>
 {
 }
 
+public interface IOpenGeneric2<T>
+{
+}
+
+[RegisterSingleton]
+public class OpenGeneric2<T> : IOpenGeneric2<T>
+{
+}
+
 public interface IServiceTag
 {
 }

@@ -334,7 +334,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         // no implementation type set, use class attribute is on
         if (implementationType.IsNullOrWhiteSpace())
         {
-            implementationType = classSymbol.ToDisplayString(_fullyQualifiedNullableFormat);
+            implementationType = ToNamedTypeWithoutPlaceholders(classSymbol).ToDisplayString(_fullyQualifiedNullableFormat);
         }
 
         // add implemented interfaces
@@ -345,7 +345,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             {
                 // This interface is typically not injected into services and, more specifically, record types auto-implement it.
                 if(implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>") continue;
-                var interfaceName = implementedInterface.ToDisplayString(_fullyQualifiedNullableFormat);
+                var interfaceName = ToNamedTypeWithoutPlaceholders(implementedInterface).ToDisplayString(_fullyQualifiedNullableFormat);
                 serviceTypes.Add(interfaceName);
             }
         }
@@ -364,6 +364,26 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
             registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
             tags.ToArray());
+    }
+
+    private static INamedTypeSymbol ToNamedTypeWithoutPlaceholders(INamedTypeSymbol typeSymbol)
+    {
+        if (!typeSymbol.IsGenericType
+            || typeSymbol.IsUnboundGenericType)
+        {
+            return typeSymbol;
+        }
+
+        foreach (var typeArgument in typeSymbol.TypeArguments)
+        {
+            // If TypeKind is TypeParameter, it's actually the name of a locally declared type-parameter -> placeholder
+            if (typeArgument.TypeKind != TypeKind.TypeParameter)
+            {
+                return typeSymbol;
+            }
+        }
+
+        return typeSymbol.ConstructUnboundGenericType();
     }
 
     private static bool IsKnownAttribute(AttributeData attribute, out string serviceLifetime)
