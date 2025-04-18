@@ -37,29 +37,33 @@ public static class KnownTypes
     public const string ServiceLifetimeTransientFullName = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
 
 
-    public static readonly int DuplicateStrategySkipValue = 0;
+    public const int DuplicateStrategySkipValue = 0;
     public const string DuplicateStrategySkipShortName = "Skip";
     public const string DuplicateStrategySkipTypeName = $"DuplicateStrategy.{DuplicateStrategySkipShortName}";
 
-    public static readonly int DuplicateStrategyReplaceValue = 1;
+    public const int DuplicateStrategyReplaceValue = 1;
     public const string DuplicateStrategyReplaceShortName = "Replace";
     public const string DuplicateStrategyReplaceTypeName = $"DuplicateStrategy.{DuplicateStrategyReplaceShortName}";
 
-    public static readonly int DuplicateStrategyAppendValue = 2;
+    public const int DuplicateStrategyAppendValue = 2;
     public const string DuplicateStrategyAppendShortName = "Append";
     public const string DuplicateStrategyAppendTypeName = $"DuplicateStrategy.{DuplicateStrategyAppendShortName}";
 
 
-    public static readonly int RegistrationStrategySelfValue = 0;
+    public const int RegistrationStrategySelfValue = 0;
     public const string RegistrationStrategySelfShortName = "Self";
     public const string RegistrationStrategySelfTypeName = $"RegistrationStrategy.{RegistrationStrategySelfShortName}";
 
-    public static readonly int RegistrationStrategyImplementedInterfacesValue = 1;
+    public const int RegistrationStrategyImplementedInterfacesValue = 1;
     public const string RegistrationStrategyImplementedInterfacesShortName = "ImplementedInterfaces";
     public const string RegistrationStrategyImplementedInterfacesTypeName = $"RegistrationStrategy.{RegistrationStrategyImplementedInterfacesShortName}";
 
-    public static readonly int RegistrationStrategySelfWithInterfacesValue = 2;
+    public const int RegistrationStrategySelfWithInterfacesValue = 2;
     public const string RegistrationStrategySelfWithInterfacesShortName = "SelfWithInterfaces";
     public const string RegistrationStrategySelfWithInterfacesTypeName = $"RegistrationStrategy.{RegistrationStrategySelfWithInterfacesShortName}";
+
+    public const int RegistrationStrategySelfWithProxyFactoryValue = 3;
+    public const string RegistrationStrategySelfWithProxyFactoryShortName = "SelfWithProxyFactory";
+    public const string RegistrationStrategySelfWithProxyFactoryTypeName = $"RegistrationStrategy.{RegistrationStrategySelfWithProxyFactoryShortName}";
 
 }
