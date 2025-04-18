@@ -397,6 +397,58 @@ public class OpenGeneric<T> : IOpenGeneric<T>
     }
 
     [Fact]
+    public Task GenerateRegisterSingletonSelfAsOpenGeneric()
+    {
+        var source = @"
+using Injectio.Attributes;
+
+namespace Injectio.Sample;
+
+public interface IOpenGeneric<T>
+{ }
+
+[RegisterSingleton]
+public class OpenGeneric<T> : IOpenGeneric<T>
+{ }
+";
+
+        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        diagnostics.Should().BeEmpty();
+
+        return Verifier
+            .Verify(output)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
+    }
+
+    [Fact]
+    public Task GenerateRegisterSingletonSelfAsClosedGeneric()
+    {
+        var source = @"
+using Injectio.Attributes;
+
+namespace Injectio.Sample;
+
+public interface IClosedGeneric<T>
+{ }
+
+[RegisterSingleton]
+public class Service : IClosedGeneric<object>
+{ }
+";
+
+        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        diagnostics.Should().BeEmpty();
+
+        return Verifier
+            .Verify(output)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
+    }
+
+    [Fact]
     public Task GenerateRegisterSingletonTags()
     {
         var source = @"
