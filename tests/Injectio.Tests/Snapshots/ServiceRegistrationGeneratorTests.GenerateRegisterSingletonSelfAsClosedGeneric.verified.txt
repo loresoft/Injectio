@@ -20,20 +20,12 @@ namespace Microsoft.Extensions.DependencyInjection
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
-                    typeof(global::Injectio.Sample.IClosedGeneric<object>),
-                    typeof(global::Injectio.Sample.Service),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Injectio.Sample.IClosedGeneric<object>, global::Injectio.Sample.Service>()
             );
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
-                    typeof(global::Injectio.Sample.Service),
-                    typeof(global::Injectio.Sample.Service),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Injectio.Sample.Service, global::Injectio.Sample.Service>()
             );
 
             return serviceCollection;

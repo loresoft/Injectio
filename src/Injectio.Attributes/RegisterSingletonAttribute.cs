@@ -29,6 +29,7 @@ public class RegisterSingletonAttribute : RegisterAttribute
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 [System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterSingletonAttribute<TService> : RegisterSingletonAttribute
+    where TService : class
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterSingletonAttribute"/> class.
@@ -53,6 +54,8 @@ public class RegisterSingletonAttribute<TService> : RegisterSingletonAttribute
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 [System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterSingletonAttribute<TService, TImplementation> : RegisterSingletonAttribute<TService>
+    where TService : class
+    where TImplementation : class, TService
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterSingletonAttribute"/> class.

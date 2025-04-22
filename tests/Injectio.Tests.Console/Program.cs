@@ -35,7 +35,7 @@ public class LocalService : ILocalService { }
 
 public interface ILocalAttributeService { }
 
-[RegisterSingleton<ILocalAttributeService>]
+[RegisterSingleton<ILocalService>]
 public class LocalAttributeService : ILocalService, IService1 { }
 
 
@@ -69,7 +69,6 @@ public static class ServiceRegistration
     {
 
     }
-
 }
 
 public class ServiceRegistrationInstance

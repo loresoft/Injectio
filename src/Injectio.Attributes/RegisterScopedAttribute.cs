@@ -29,6 +29,7 @@ public class RegisterScopedAttribute : RegisterAttribute
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 [System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterScopedAttribute<TService> : RegisterScopedAttribute
+    where TService : class
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterScopedAttribute"/> class.
@@ -53,6 +54,8 @@ public class RegisterScopedAttribute<TService> : RegisterScopedAttribute
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 [System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterScopedAttribute<TService, TImplementation> : RegisterScopedAttribute<TService>
+    where TService : class
+    where TImplementation : class, TService
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterScopedAttribute"/> class.

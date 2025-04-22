@@ -20,10 +20,9 @@ namespace Microsoft.Extensions.DependencyInjection
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(
                     typeof(global::Injectio.Sample.IOpenGeneric<>),
-                    typeof(global::Injectio.Sample.OpenGeneric<>),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
+                    typeof(global::Injectio.Sample.OpenGeneric<>)
                 )
             );
 

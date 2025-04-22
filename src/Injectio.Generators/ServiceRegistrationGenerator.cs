@@ -256,6 +256,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         string? registrationStrategy = null;
         var tags = new HashSet<string>();
         string? serviceKey = null;
+        bool isOpenGeneric = false;
 
         var attributeClass = attribute.AttributeClass;
         if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
@@ -290,13 +291,20 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             switch (name)
             {
                 case "ServiceType":
-                    serviceTypes.Add(value.ToString());
+                    var serviceTypeSymbol = value as INamedTypeSymbol;
+                    isOpenGeneric = isOpenGeneric || IsOpenGeneric(serviceTypeSymbol);
+
+                    var serviceType = serviceTypeSymbol?.ToDisplayString(_fullyQualifiedNullableFormat) ?? value.ToString();
+                    serviceTypes.Add(serviceType);
                     break;
                 case "ServiceKey":
                     serviceKey = parameter.Value.ToCSharpString();
                     break;
                 case "ImplementationType":
-                    implementationType = value.ToString();
+                    var implementationTypeSymbol = value as INamedTypeSymbol;
+                    isOpenGeneric = isOpenGeneric || IsOpenGeneric(implementationTypeSymbol);
+
+                    implementationType = implementationTypeSymbol?.ToDisplayString(_fullyQualifiedNullableFormat) ?? value.ToString();
                     break;
                 case "Factory":
                     implementationFactory = value.ToString();
@@ -334,7 +342,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         // no implementation type set, use class attribute is on
         if (implementationType.IsNullOrWhiteSpace())
         {
-            implementationType = ToNamedTypeWithoutPlaceholders(classSymbol).ToDisplayString(_fullyQualifiedNullableFormat);
+            var unboundType = ToUnboundGenericType(classSymbol);
+            isOpenGeneric = isOpenGeneric || IsOpenGeneric(unboundType);
+            implementationType = unboundType.ToDisplayString(_fullyQualifiedNullableFormat);
         }
 
         // add implemented interfaces
@@ -344,8 +354,13 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             foreach (var implementedInterface in classSymbol.AllInterfaces)
             {
                 // This interface is typically not injected into services and, more specifically, record types auto-implement it.
-                if(implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>") continue;
-                var interfaceName = ToNamedTypeWithoutPlaceholders(implementedInterface).ToDisplayString(_fullyQualifiedNullableFormat);
+                if(implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
+                    continue;
+
+                var unboundInterface = ToUnboundGenericType(implementedInterface);
+                isOpenGeneric = isOpenGeneric || IsOpenGeneric(unboundInterface);
+
+                var interfaceName = unboundInterface.ToDisplayString(_fullyQualifiedNullableFormat);
                 serviceTypes.Add(interfaceName);
             }
         }
@@ -356,31 +371,27 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             serviceTypes.Add(implementationType!);
 
         return new ServiceRegistration(
-            serviceLifetime,
-            implementationType!,
-            serviceTypes.ToArray(),
-            serviceKey,
-            implementationFactory,
-            duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
-            registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-            tags.ToArray());
+            Lifetime: serviceLifetime,
+            ImplementationType: implementationType!,
+            ServiceTypes: serviceTypes.ToArray(),
+            ServiceKey: serviceKey,
+            Factory: implementationFactory,
+            Duplicate: duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
+            Registration: registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+            Tags: tags.ToArray(),
+            IsOpenGeneric: isOpenGeneric);
     }
 
-    private static INamedTypeSymbol ToNamedTypeWithoutPlaceholders(INamedTypeSymbol typeSymbol)
+    private static INamedTypeSymbol ToUnboundGenericType(INamedTypeSymbol typeSymbol)
     {
-        if (!typeSymbol.IsGenericType
-            || typeSymbol.IsUnboundGenericType)
-        {
+        if (!typeSymbol.IsGenericType || typeSymbol.IsUnboundGenericType)
             return typeSymbol;
-        }
 
         foreach (var typeArgument in typeSymbol.TypeArguments)
         {
             // If TypeKind is TypeParameter, it's actually the name of a locally declared type-parameter -> placeholder
             if (typeArgument.TypeKind != TypeKind.TypeParameter)
-            {
                 return typeSymbol;
-            }
         }
 
         return typeSymbol.ConstructUnboundGenericType();
@@ -390,23 +401,23 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     {
         if (IsSingletonAttribute(attribute))
         {
-            serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton";
+            serviceLifetime = KnownTypes.ServiceLifetimeSingletonFullName;
             return true;
         }
 
         if (IsScopedAttribute(attribute))
         {
-            serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped";
+            serviceLifetime = KnownTypes.ServiceLifetimeScopedFullName;
             return true;
         }
 
         if (IsTransientAttribute(attribute))
         {
-            serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
+            serviceLifetime = KnownTypes.ServiceLifetimeTransientFullName;
             return true;
         }
 
-        serviceLifetime = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
+        serviceLifetime = KnownTypes.ServiceLifetimeTransientFullName;
         return false;
     }
 
@@ -499,6 +510,17 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 }
             }
         };
+    }
+
+    private static bool IsOpenGeneric(INamedTypeSymbol? typeSymbol)
+    {
+        if (typeSymbol is null)
+            return false;
+
+        if (!typeSymbol.IsGenericType)
+            return false;
+
+        return typeSymbol.IsUnboundGenericType;
     }
 
     private static string ResolveDuplicateStrategy(object? value)

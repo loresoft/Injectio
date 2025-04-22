@@ -20,62 +20,32 @@ namespace Microsoft.Extensions.DependencyInjection
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
-                    typeof(global::IServiceKeyed),
-                    "Alpha",
-                    typeof(global::Injectio.Sample.ServiceAlphaKeyed),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::IServiceKeyed, global::Injectio.Sample.ServiceAlphaKeyed>("Alpha")
             );
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
-                    typeof(global::IServiceKeyed),
-                    "Beta",
-                    typeof(global::Injectio.Sample.ServiceBetaKeyed),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::IServiceKeyed, global::Injectio.Sample.ServiceBetaKeyed>("Beta")
             );
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
-                    typeof(global::IServiceKeyed),
-                    Injectio.Sample.ServiceType.Alpha,
-                    typeof(global::Injectio.Sample.ServiceAlphaTypeKeyed),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::IServiceKeyed, global::Injectio.Sample.ServiceAlphaTypeKeyed>(Injectio.Sample.ServiceType.Alpha)
             );
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
-                    typeof(global::IServiceKeyed),
-                    Injectio.Sample.ServiceType.Beta,
-                    typeof(global::Injectio.Sample.ServiceBetaTypeKeyed),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::IServiceKeyed, global::Injectio.Sample.ServiceBetaTypeKeyed>(Injectio.Sample.ServiceType.Beta)
             );
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
-                    typeof(global::IServiceKeyed),
-                    "Charlie",
-                    global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory,
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::IServiceKeyed>("Charlie", global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory)
             );
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.DescribeKeyed(
-                    typeof(global::IServiceKeyed),
-                    "Delta",
-                    global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory,
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton
-                )
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::IServiceKeyed>("Delta", global::Injectio.Sample.ServiceFactoryKeyed.ServiceFactory)
             );
 
             return serviceCollection;

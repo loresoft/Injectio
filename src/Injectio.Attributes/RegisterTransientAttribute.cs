@@ -29,6 +29,7 @@ public class RegisterTransientAttribute : RegisterAttribute
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 [System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterTransientAttribute<TService> : RegisterTransientAttribute
+    where TService : class
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterTransientAttribute"/> class.
@@ -53,6 +54,8 @@ public class RegisterTransientAttribute<TService> : RegisterTransientAttribute
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 [System.Diagnostics.Conditional("REGISTER_SERVICE_USAGES")]
 public class RegisterTransientAttribute<TService, TImplementation> : RegisterTransientAttribute<TService>
+    where TService : class
+    where TImplementation : class, TService
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterTransientAttribute"/> class.

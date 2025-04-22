@@ -3,4 +3,9 @@
     <CompilerVisibleProperty Include="InjectioName" />
     <CompilerVisibleProperty Include="InjectioInternal" />
   </ItemGroup>
+
+  <ItemGroup Condition="$(Language) == 'C#' and ($(ImplicitUsings) == 'enable' or $(ImplicitUsings) == 'true')">
+    <Using Include="Injectio.Attributes" />
+  </ItemGroup>
+
 </Project>

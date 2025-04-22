@@ -26,12 +26,15 @@ public static class KnownTypes
 
     public const string ServiceLifetimeSingletonShortName = "Singleton";
     public const string ServiceLifetimeSingletonTypeName = $"ServiceLifetime.{ServiceLifetimeSingletonShortName}";
+    public const string ServiceLifetimeSingletonFullName = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton";
 
     public const string ServiceLifetimeScopedShortName = "Scoped";
     public const string ServiceLifetimeScopedTypeName = $"ServiceLifetime.{ServiceLifetimeScopedShortName}";
+    public const string ServiceLifetimeScopedFullName = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped";
 
     public const string ServiceLifetimeTransientShortName = "Transient";
     public const string ServiceLifetimeTransientTypeName = $"ServiceLifetime.{ServiceLifetimeTransientShortName}";
+    public const string ServiceLifetimeTransientFullName = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";
 
 
     public static readonly int DuplicateStrategySkipValue = 0;
@@ -58,6 +61,5 @@ public static class KnownTypes
     public static readonly int RegistrationStrategySelfWithInterfacesValue = 2;
     public const string RegistrationStrategySelfWithInterfacesShortName = "SelfWithInterfaces";
     public const string RegistrationStrategySelfWithInterfacesTypeName = $"RegistrationStrategy.{RegistrationStrategySelfWithInterfacesShortName}";
-
 
 }

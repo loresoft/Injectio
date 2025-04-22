@@ -161,7 +161,10 @@ public static class ServiceRegistrationWriter
             if (serviceType.IsNullOrWhiteSpace())
                 continue;
 
-            WriteServiceType(codeBuilder, serviceRegistration, serviceMethod, serviceType);
+            if (serviceRegistration.IsOpenGeneric)
+                WriteServiceType(codeBuilder, serviceRegistration, serviceMethod, serviceType);
+            else
+                WriteServiceGeneric(codeBuilder, serviceRegistration, serviceMethod, serviceType);
         }
 
         if (serviceRegistration.Tags.Count > 0)
@@ -179,6 +182,8 @@ public static class ServiceRegistrationWriter
         string serviceMethod,
         string serviceType)
     {
+        var describeMethod = GetServiceDescriptorMethod(serviceRegistration);
+
         codeBuilder
             .Append("global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.")
             .Append(serviceMethod)
@@ -186,7 +191,7 @@ public static class ServiceRegistrationWriter
             .IncrementIndent()
             .AppendLine("serviceCollection,")
             .Append("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.")
-            .Append(serviceRegistration.ServiceKey.HasValue() ? "DescribeKeyed" : "Describe")
+            .Append(describeMethod)
             .AppendLine("(")
             .IncrementIndent()
             .Append("typeof(")
@@ -228,11 +233,66 @@ public static class ServiceRegistrationWriter
         }
 
         codeBuilder
-            .AppendLine(",")
-            .Append("global::")
-            .Append(serviceRegistration.Lifetime)
             .AppendLine()
             .DecrementIndent()
+            .AppendLine(")")
+            .DecrementIndent()
+            .AppendLine(");")
+            .AppendLine();
+    }
+
+    private static void WriteServiceGeneric(
+        IndentedStringBuilder codeBuilder,
+        ServiceRegistration serviceRegistration,
+        string serviceMethod,
+        string serviceType)
+    {
+        var describeMethod = GetServiceDescriptorMethod(serviceRegistration);
+
+        var implementationType = serviceRegistration.ImplementationType.HasValue()
+            ? serviceRegistration.ImplementationType
+            : serviceType;
+
+        codeBuilder
+            .Append("global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.")
+            .Append(serviceMethod)
+            .AppendLine("(")
+            .IncrementIndent()
+            .AppendLine("serviceCollection,")
+            .Append("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.")
+            .Append(describeMethod)
+            .Append("<")
+            .AppendIf("global::", !serviceType.StartsWith("global::"))
+            .Append(serviceType);
+
+        // don't include the implementation type if there is factory
+        if (serviceRegistration.Factory.IsNullOrEmpty())
+        {
+            codeBuilder
+                .Append(", ")
+                .AppendIf("global::", !implementationType.StartsWith("global::"))
+                .Append(implementationType);
+        }
+
+        codeBuilder.Append(">(");
+
+        // write service key argument
+        if (serviceRegistration.ServiceKey.HasValue())
+            codeBuilder.Append(serviceRegistration.ServiceKey);
+
+        // write factory method
+        if (serviceRegistration.Factory.HasValue())
+        {
+            bool hasNamespace = serviceRegistration.Factory?.Contains(".") == true;
+
+            codeBuilder
+                .AppendIf(", ", serviceRegistration.ServiceKey.HasValue()) // second argument if there is a service key
+                .AppendIf(serviceRegistration.ImplementationType, !hasNamespace)
+                .AppendIf(".", !hasNamespace)
+                .Append(serviceRegistration.Factory);
+        }
+
+        codeBuilder
             .AppendLine(")")
             .DecrementIndent()
             .AppendLine(");")
@@ -253,4 +313,18 @@ public static class ServiceRegistrationWriter
         };
     }
 
+    public static string GetServiceDescriptorMethod(ServiceRegistration serviceRegistration)
+    {
+        var describeMethod = serviceRegistration.Lifetime switch
+        {
+            KnownTypes.ServiceLifetimeSingletonFullName => "Singleton",
+            KnownTypes.ServiceLifetimeScopedFullName => "Scoped",
+            KnownTypes.ServiceLifetimeTransientFullName => "Transient",
+            _ => "Transient"
+        };
+
+        return serviceRegistration.ServiceKey.HasValue()
+            ? $"Keyed{describeMethod}"
+            : describeMethod;
+    }
 }

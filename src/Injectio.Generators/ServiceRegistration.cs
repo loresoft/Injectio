@@ -10,5 +10,6 @@ public record ServiceRegistration(
     string? Factory,
     string Duplicate,
     string Registration,
-    EquatableArray<string> Tags
+    EquatableArray<string> Tags,
+    bool IsOpenGeneric = false
 );
