@@ -130,6 +130,14 @@ public class FactoryService : IFactoryService
 public class OpenGeneric<T> : IOpenGeneric<T> { }
 ```
 
+In version 5.0+, self-registration of open-generic types supported
+
+```c#
+[RegisterSingleton]
+public class OpenGeneric<T> : IOpenGeneric<T> { }
+```
+
+
 #### Generic Attributes
 
 You can use generic attributes to register services if your project targets .NET 7.0+
