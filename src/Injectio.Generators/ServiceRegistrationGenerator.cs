@@ -336,7 +336,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             && implementationType == null
             && serviceTypes.Count == 0)
         {
-            registrationStrategy = KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
+            registrationStrategy = KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
         }
 
         // no implementation type set, use class attribute is on
@@ -348,7 +348,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         }
 
         // add implemented interfaces
-        bool includeInterfaces = registrationStrategy is KnownTypes.RegistrationStrategyImplementedInterfacesShortName or KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
+        bool includeInterfaces = registrationStrategy is KnownTypes.RegistrationStrategyImplementedInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
         if (includeInterfaces)
         {
             foreach (var implementedInterface in classSymbol.AllInterfaces)
@@ -366,9 +368,17 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         }
 
         // add class attribute is on; default service type if not set
-        bool includeSelf = registrationStrategy is KnownTypes.RegistrationStrategySelfShortName or KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
+        bool includeSelf = registrationStrategy is KnownTypes.RegistrationStrategySelfShortName
+            or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
         if (includeSelf || serviceTypes.Count == 0)
             serviceTypes.Add(implementationType!);
+
+        if (registrationStrategy is null && serviceTypes.Contains(implementationType!))
+            registrationStrategy = KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+
+        if (registrationStrategy is KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName && isOpenGeneric)
+            registrationStrategy = KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
 
         return new ServiceRegistration(
             Lifetime: serviceLifetime,
@@ -529,9 +539,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         {
             int v => v switch
             {
-                0 => KnownTypes.DuplicateStrategySkipShortName,
-                1 => KnownTypes.DuplicateStrategyReplaceShortName,
-                2 => KnownTypes.DuplicateStrategyAppendShortName,
+                KnownTypes.DuplicateStrategySkipValue => KnownTypes.DuplicateStrategySkipShortName,
+                KnownTypes.DuplicateStrategyReplaceValue => KnownTypes.DuplicateStrategyReplaceShortName,
+                KnownTypes.DuplicateStrategyAppendValue => KnownTypes.DuplicateStrategyAppendShortName,
                 _ => KnownTypes.DuplicateStrategySkipShortName
             },
             string text => text,
@@ -545,13 +555,14 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         {
             int v => v switch
             {
-                0 => KnownTypes.RegistrationStrategySelfShortName,
-                1 => KnownTypes.RegistrationStrategyImplementedInterfacesShortName,
-                2 => KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                _ => KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+                KnownTypes.RegistrationStrategySelfValue => KnownTypes.RegistrationStrategySelfShortName,
+                KnownTypes.RegistrationStrategyImplementedInterfacesValue => KnownTypes.RegistrationStrategyImplementedInterfacesShortName,
+                KnownTypes.RegistrationStrategySelfWithInterfacesValue => KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
+                KnownTypes.RegistrationStrategySelfWithProxyFactoryValue => KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName,
+                _ => KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
             },
             string text => text,
-            _ => KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            _ => KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
         };
     }
 }

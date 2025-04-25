@@ -291,6 +291,23 @@ public static class ServiceRegistrationWriter
                 .AppendIf(".", !hasNamespace)
                 .Append(serviceRegistration.Factory);
         }
+        else if (serviceRegistration.Registration == KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
+            && serviceRegistration.ImplementationType != serviceType)
+        {
+            codeBuilder
+                .AppendIf(", ", serviceRegistration.ServiceKey.HasValue())
+                .Append("(serviceProvider")
+                .AppendIf(", key", serviceRegistration.ServiceKey.HasValue())
+                .Append(") => global::Microsoft.Extensions.DependencyInjection.ServiceProvider")
+                .Append(serviceRegistration.ServiceKey.HasValue()
+                    ? "KeyedServiceExtensions.GetRequiredKeyedService<"
+                    : "ServiceExtensions.GetRequiredService<")
+                .AppendIf("global::", !serviceRegistration.ImplementationType.StartsWith("global::"))
+                .Append(serviceRegistration.ImplementationType)
+                .Append(">(serviceProvider")
+                .AppendIf(", key", serviceRegistration.ServiceKey.HasValue())
+                .Append(")");
+        }
 
         codeBuilder
             .AppendLine(")")
