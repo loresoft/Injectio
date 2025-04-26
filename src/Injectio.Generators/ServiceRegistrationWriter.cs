@@ -296,6 +296,8 @@ public static class ServiceRegistrationWriter
         {
             codeBuilder
                 .AppendIf(", ", serviceRegistration.ServiceKey.HasValue())
+                .AppendLine()
+                .IncrementIndent()
                 .Append("(serviceProvider")
                 .AppendIf(", key", serviceRegistration.ServiceKey.HasValue())
                 .Append(") => global::Microsoft.Extensions.DependencyInjection.ServiceProvider")
@@ -306,7 +308,9 @@ public static class ServiceRegistrationWriter
                 .Append(serviceRegistration.ImplementationType)
                 .Append(">(serviceProvider")
                 .AppendIf(", key", serviceRegistration.ServiceKey.HasValue())
-                .Append(")");
+                .Append(")")
+                .AppendLine()
+                .DecrementIndent();
         }
 
         codeBuilder

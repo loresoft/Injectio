@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
-using Injectio.Attributes;
 using Injectio.Generators;
 
 using VerifyXunit;
@@ -11,7 +9,6 @@ using VerifyXunit;
 using Xunit;
 
 namespace Injectio.Tests;
-
 
 public class ServiceRegistrationWriterTests
 {
@@ -149,14 +146,3 @@ public class ServiceRegistrationWriterTests
             .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 }
-
-public interface IService1 { }
-
-public interface IService2 { }
-
-public class Service1 : IService1 { }
-
-public class Service2 : IService2 { }
-
-public class ServiceMultiple : IService1, IService2 { }
-

@@ -38,14 +38,9 @@ public interface IFactoryService1
 }
 
 [RegisterTransient(ServiceType = typeof(IFactoryService1), Factory = nameof(ServiceFactory))]
-public class FactoryService1 : IFactoryService1
+public class FactoryService1(IService1 service1) : IFactoryService1
 {
-    private readonly IService1 _service1;
-
-    public FactoryService1(IService1 service1)
-    {
-        _service1 = service1;
-    }
+    public IService1 Service { get; } = service1 ?? throw new ArgumentNullException(nameof(service1));
 
     public static IFactoryService1 ServiceFactory(IServiceProvider serviceProvider)
     {
@@ -102,12 +97,12 @@ public interface IServiceKeyed
 
 }
 
-[RegisterSingleton<IServiceKeyed>(ServiceKey = "Alpha")]
+[RegisterSingleton(ServiceKey = "Alpha")]
 public class ServiceAlphaKeyed : IServiceKeyed
 {
 }
 
-[RegisterSingleton<IServiceKeyed>(ServiceKey = "Beta")]
+[RegisterSingleton(ServiceKey = "Beta")]
 public class ServiceBetaKeyed : IServiceKeyed
 {
 }

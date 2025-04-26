@@ -71,6 +71,31 @@ public class SingletonService : IService
     }
 
     [Fact]
+    public Task GenerateRegisterScopedKeyedSelfWithInterfaces()
+    {
+        var source = @"
+using Injectio.Attributes;
+
+namespace Injectio.Sample;
+
+public interface IService { }
+
+[RegisterScoped(ServiceKey = ""Alpha"")]
+public class SingletonService : IService
+{ }
+";
+
+        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        diagnostics.Should().BeEmpty();
+
+        return Verifier
+            .Verify(output)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
+    }
+
+    [Fact]
     public Task GenerateRegisterTransientSelfWithInterfaces()
     {
         var source = @"
