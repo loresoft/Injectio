@@ -2,6 +2,7 @@
   <Folder Name="/Build/">
     <File Path=".github/dependabot.yml" />
     <File Path=".github/workflows/dotnet.yml" />
+    <File Path="Directory.Packages.props" />
     <File Path="README.md" />
     <File Path="src/Directory.Build.props" />
   </Folder>
