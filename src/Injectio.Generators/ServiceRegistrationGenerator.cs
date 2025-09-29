@@ -21,35 +21,33 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var pipeline = context.SyntaxProvider.CreateSyntaxProvider(
+        // find all classes and methods with attributes
+        var registrations = context.SyntaxProvider
+            .CreateSyntaxProvider(
                 predicate: SyntacticPredicate,
                 transform: SemanticTransform
             )
-            .Where(static context => context is not null);
+            .Where(static context =>
+                context is not null
+                && (context.ServiceRegistrations?.Count > 0 || context.ModuleRegistrations?.Count > 0)
+            )
+            .Collect()
+            .WithTrackingName("Registrations");
 
-        // Emit the diagnostics, if needed
-        var diagnostics = pipeline
-            .Select(static (item, _) => item!.Diagnostics)
-            .Where(static item => item?.Count > 0);
-
-        context.RegisterSourceOutput(diagnostics, ReportDiagnostic);
-
-        // select contexts with registrations
-        var registrations = pipeline
-            .Where(static context => context?.ServiceRegistrations?.Count > 0 || context?.ModuleRegistrations?.Count > 0)
-            .Collect();
+        // include compilation options
+        var assemblyName = context.CompilationProvider
+            .Select(static (c, _) => c.AssemblyName)
+            .WithTrackingName("AssemblyName");
 
         // include config options
-        var assemblyName = context.CompilationProvider
-            .Select(static (c, _) => c.AssemblyName);
-
         var methodName = context.AnalyzerConfigOptionsProvider
             .Select(static (c, _) =>
             {
                 c.GlobalOptions.TryGetValue("build_property.InjectioName", out var methodName);
                 c.GlobalOptions.TryGetValue("build_property.InjectioInternal", out var methodInternal);
                 return new MethodOptions(methodName, methodInternal);
-            });
+            })
+            .WithTrackingName("Options");
 
         var options = assemblyName.Combine(methodName);
         var generation = registrations.Combine(options);
@@ -88,15 +86,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         // add source file
         sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
-    }
-
-    private static void ReportDiagnostic(SourceProductionContext context, EquatableArray<Diagnostic>? diagnostics)
-    {
-        if (diagnostics == null)
-            return;
-
-        foreach (var diagnostic in diagnostics)
-            context.ReportDiagnostic(diagnostic);
     }
 
     private static bool SyntacticPredicate(SyntaxNode syntaxNode, CancellationToken cancellationToken)
@@ -144,9 +133,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (!isKnown)
             return null;
 
-        var (diagnostics, hasServiceCollection, hasTagCollection) = ValidateMethod(methodDeclaration, methodSymbol);
-        if (diagnostics.Any())
-            return new ServiceRegistrationContext(diagnostics);
+        var (isValid, hasTagCollection) = ValidateMethod(methodSymbol);
+        if (!isValid)
+            return null;
 
         var registration = new ModuleRegistration
         (
@@ -186,60 +175,33 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return new ServiceRegistrationContext(ServiceRegistrations: registrations.ToArray());
     }
 
-    private static (EquatableArray<Diagnostic> diagnostics, bool hasServiceCollection, bool hasTagCollection) ValidateMethod(MethodDeclarationSyntax methodDeclaration, IMethodSymbol methodSymbol)
+    private static (bool isValid, bool hasTagCollection) ValidateMethod(IMethodSymbol methodSymbol)
     {
-        var diagnostics = new List<Diagnostic>();
         var hasServiceCollection = false;
         var hasTagCollection = false;
-
-        var methodName = methodSymbol.Name;
 
         // validate first parameter should be service collection
         if (methodSymbol.Parameters.Length is 1 or 2)
         {
             var parameterSymbol = methodSymbol.Parameters[0];
             hasServiceCollection = IsServiceCollection(parameterSymbol);
-            if (!hasServiceCollection)
-            {
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.InvalidServiceCollectionParameter,
-                    methodDeclaration.GetLocation(),
-                    parameterSymbol.Name,
-                    methodName
-                );
-                diagnostics.Add(diagnostic);
-            }
         }
+
+        if (methodSymbol.Parameters.Length is 1)
+            return (hasServiceCollection, false);
 
         // validate second parameter should be string collection
         if (methodSymbol.Parameters.Length is 2)
         {
             var parameterSymbol = methodSymbol.Parameters[1];
             hasTagCollection = IsStringCollection(parameterSymbol);
-            if (!hasTagCollection)
-            {
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.InvalidModuleParameter,
-                    methodDeclaration.GetLocation(),
-                    parameterSymbol.Name,
-                    methodName
-                );
-                diagnostics.Add(diagnostic);
-            }
+
+            // to be valid, parameter 0 must be service collection and parameter 1 must be string collection, 
+            return (hasServiceCollection && hasTagCollection, hasTagCollection);
         }
 
-        if (methodSymbol.Parameters.Length is 1 or 2)
-            return (diagnostics.ToArray(), hasServiceCollection, hasTagCollection);
-
-        // invalid parameter count
-        var parameterDiagnostic = Diagnostic.Create(
-            DiagnosticDescriptors.InvalidServiceCollectionParameter,
-            methodDeclaration.GetLocation(),
-            methodName
-        );
-        diagnostics.Add(parameterDiagnostic);
-
-        return (diagnostics.ToArray(), hasServiceCollection, hasTagCollection);
+        // invalid method
+        return (false, false);
     }
 
     private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
@@ -356,7 +318,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             foreach (var implementedInterface in classSymbol.AllInterfaces)
             {
                 // This interface is typically not injected into services and, more specifically, record types auto-implement it.
-                if(implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
+                if (implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
                     continue;
 
                 var unboundInterface = ToUnboundGenericType(implementedInterface);

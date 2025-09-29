@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 
-using FluentAssertions;
+using AwesomeAssertions;
 
 using Injectio.Attributes;
 using Injectio.Generators;
@@ -35,9 +35,7 @@ public class SingletonService : IService
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -60,9 +58,7 @@ public class SingletonService : IService
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -85,9 +81,7 @@ public class SingletonService : IService
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -110,9 +104,7 @@ public class SingletonService : IService
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -143,9 +135,7 @@ public class ServiceMultiple : IService1, IService2
 }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -168,9 +158,7 @@ public class SingletonService : IService
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -195,9 +183,7 @@ public class SingletonService : IService1, IService2
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -233,9 +219,7 @@ public class RegistrationModule
 }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -271,9 +255,7 @@ public static class RegistrationModule
 }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -309,12 +291,12 @@ public static class RegistrationModule
 }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
-        diagnostics.Should().NotBeEmpty();
-        diagnostics[0].Id.Should().Be("SD0010");
-
-        return Task.CompletedTask;
+        return Verifier
+            .Verify(output)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
     [Fact]
@@ -345,12 +327,12 @@ public static class RegistrationModule
 }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
-        diagnostics.Should().NotBeEmpty();
-        diagnostics[0].Id.Should().Be("SD0011");
-
-        return Task.CompletedTask;
+        return Verifier
+            .Verify(output)
+            .UseDirectory("Snapshots")
+            .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
     [Fact]
@@ -385,9 +367,7 @@ public class FactoryService : IFactoryService
 }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -411,9 +391,7 @@ public class OpenGeneric<T> : IOpenGeneric<T>
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -437,9 +415,7 @@ public class OpenGeneric<T> : IOpenGeneric<T>
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -463,9 +439,7 @@ public class Service : IClosedGeneric<object>
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -489,9 +463,7 @@ public class ServiceTag : IServiceTag
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -515,9 +487,7 @@ public class SingletonService : IService
 { }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -579,9 +549,7 @@ public enum ServiceType
 }
 ";
 
-        var (diagnostics, output) = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        diagnostics.Should().BeEmpty();
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -590,7 +558,7 @@ public enum ServiceType
     }
 
 
-    private static (ImmutableArray<Diagnostic> Diagnostics, string Output) GetGeneratedOutput<T>(string source)
+    private static string GetGeneratedOutput<T>(string source)
         where T : IIncrementalGenerator, new()
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
@@ -618,6 +586,6 @@ public enum ServiceType
 
         var trees = outputCompilation.SyntaxTrees.ToList();
 
-        return (diagnostics, trees.Count != originalTreeCount ? trees[^1].ToString() : string.Empty);
+        return trees.Count != originalTreeCount ? trees[^1].ToString() : string.Empty;
     }
 }

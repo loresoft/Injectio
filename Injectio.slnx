@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/Build/">
+    <File Path=".github/dependabot.yml" />
+    <File Path=".github/workflows/dotnet.yml" />
+    <File Path="README.md" />
+    <File Path="src/Directory.Build.props" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/Injectio.Acceptance.Tests/Injectio.Acceptance.Tests.csproj" />
+    <Project Path="tests/Injectio.Tests.Console/Injectio.Tests.Console.csproj" />
+    <Project Path="tests/Injectio.Tests.Library/Injectio.Tests.Library.csproj" />
+    <Project Path="tests/Injectio.Tests/Injectio.Tests.csproj" />
+  </Folder>
+  <Project Path="src/Injectio.Attributes/Injectio.Attributes.csproj" />
+  <Project Path="src/Injectio.Generators/Injectio.Generators.csproj" />
+</Solution>
