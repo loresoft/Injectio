@@ -23,6 +23,9 @@ public static class KnownTypes
     public const string ModuleAttributeTypeName = $"{ModuleAttributeShortName}Attribute";
     public const string ModuleAttributeFullName = $"{AbstractionNamespace}.{ModuleAttributeTypeName}";
 
+    public const string StaticObjectAttributeShortName = "RegisterStaticObject";
+    public const string StaticObjectAttributeTypeName = $"{StaticObjectAttributeShortName}Attribute";
+    public const string StaticObjectAttributeFullName = $"{AbstractionNamespace}.{StaticObjectAttributeShortName}";
 
     public const string ServiceLifetimeSingletonShortName = "Singleton";
     public const string ServiceLifetimeSingletonTypeName = $"ServiceLifetime.{ServiceLifetimeSingletonShortName}";

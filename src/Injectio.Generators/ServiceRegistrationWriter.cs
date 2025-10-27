@@ -8,6 +8,7 @@ public static class ServiceRegistrationWriter
     public static string GenerateExtensionClass(
         IReadOnlyList<ModuleRegistration> moduleRegistrations,
         IReadOnlyList<ServiceRegistration> serviceRegistrations,
+        IReadOnlyList<StaticObjectRegistration> staticObjectRegistrations,
         string? assemblyName,
         string? methodName,
         string? methodInternal)
@@ -64,6 +65,11 @@ public static class ServiceRegistrationWriter
         foreach (var serviceRegistration in serviceRegistrations)
         {
             WriteRegistration(codeBuilder, serviceRegistration);
+        }
+
+        foreach (var staticObjectRegistration in staticObjectRegistrations)
+        {
+            WriteRegistration(codeBuilder, staticObjectRegistration);
         }
 
         codeBuilder
@@ -127,6 +133,60 @@ public static class ServiceRegistrationWriter
 
     private static void WriteRegistration(
         IndentedStringBuilder codeBuilder,
+        StaticObjectRegistration staticObjectRegistration)
+    {
+        if (staticObjectRegistration.Tags.Count > 0)
+        {
+            codeBuilder
+                .Append("if (tagSet.Count == 0 || tagSet.Intersect(new[] { ");
+
+            bool wroteTag = false;
+            foreach (var tag in staticObjectRegistration.Tags)
+            {
+                if (wroteTag)
+                    codeBuilder.Append(", ");
+
+                codeBuilder
+                    .Append("\"")
+                    .Append(tag)
+                    .Append("\"");
+
+                wroteTag = true;
+            }
+
+            codeBuilder
+                .AppendLine(" }).Any())")
+                .AppendLine("{")
+                .IncrementIndent();
+        }
+
+        var serviceMethod = GetServiceCollectionMethod(staticObjectRegistration.Duplicate);
+
+        foreach (var serviceType in staticObjectRegistration.ServiceTypes)
+        {
+            if (serviceType.IsNullOrWhiteSpace())
+                continue;
+
+            WriteServiceType(codeBuilder, staticObjectRegistration, serviceMethod, serviceType);
+            /*
+            if (staticObjectRegistration.IsOpenGeneric)
+                WriteServiceType(codeBuilder, staticObjectRegistration, serviceMethod, serviceType);
+            else
+                WriteServiceGeneric(codeBuilder, serviceRegistration, serviceMethod, serviceType);
+                */
+        }
+
+        if (staticObjectRegistration.Tags.Count > 0)
+        {
+            codeBuilder
+                .DecrementIndent()
+                .AppendLine("}")
+                .AppendLine();
+        }
+    }
+
+    private static void WriteRegistration(
+        IndentedStringBuilder codeBuilder,
         ServiceRegistration serviceRegistration)
     {
         if (serviceRegistration.Tags.Count > 0)
@@ -174,6 +234,48 @@ public static class ServiceRegistrationWriter
                 .AppendLine("}")
                 .AppendLine();
         }
+    }
+
+    private static void WriteServiceType(
+        IndentedStringBuilder codeBuilder,
+        StaticObjectRegistration staticObjectRegistration,
+        string serviceMethod,
+        string serviceType)
+    {
+        var describeMethod = GetStaticObjectDescriptorMethod(staticObjectRegistration);
+
+        codeBuilder
+            .Append(
+                "global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.")
+            .Append(serviceMethod)
+            .AppendLine("(")
+            .IncrementIndent()
+            .AppendLine("serviceCollection,")
+            .Append("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.")
+            .Append(describeMethod)
+            .Append("<")
+            .AppendIf("global::", !serviceType.StartsWith("global::"))
+            .Append(serviceType)
+            .Append(">")
+            .Append("(");
+
+        if (staticObjectRegistration.ServiceKey.HasValue())
+        {
+            codeBuilder.Append(staticObjectRegistration.ServiceKey);
+            codeBuilder.Append(", ");
+        }
+
+        codeBuilder
+            .AppendIf("global::", !staticObjectRegistration.ClassName.StartsWith("global::"))
+            .Append(staticObjectRegistration.ClassName)
+            .Append(".")
+            .Append(staticObjectRegistration.MemberName)
+            .AppendLine(")")
+            .DecrementIndent();
+
+        codeBuilder
+            .AppendLine(");")
+            .AppendLine();
     }
 
     private static void WriteServiceType(
@@ -332,6 +434,16 @@ public static class ServiceRegistrationWriter
             KnownTypes.DuplicateStrategyAppendTypeName => "Add",
             _ => "TryAdd"
         };
+    }
+
+    public static string GetStaticObjectDescriptorMethod(StaticObjectRegistration serviceRegistration)
+    {
+        //currently support Singleton only.
+        var describeMethod =  "Singleton";
+
+        return serviceRegistration.ServiceKey.HasValue()
+            ? $"Keyed{describeMethod}"
+            : describeMethod;
     }
 
     public static string GetServiceDescriptorMethod(ServiceRegistration serviceRegistration)

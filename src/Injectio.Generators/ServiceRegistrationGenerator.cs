@@ -29,7 +29,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             )
             .Where(static context =>
                 context is not null
-                && (context.ServiceRegistrations?.Count > 0 || context.ModuleRegistrations?.Count > 0)
+                && (context.ServiceRegistrations?.Count > 0 || context.ModuleRegistrations?.Count > 0 || context.StaticObjectRegistrations?.Count > 0)
             )
             .Collect()
             .WithTrackingName("Registrations");
@@ -69,6 +69,11 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Where(m => m is not null)
             .ToArray();
 
+        var staticObjectRegistrations = source.Registrations
+            .SelectMany(m => m?.StaticObjectRegistrations ?? Array.Empty<StaticObjectRegistration>())
+            .Where(m => m is not null)
+            .ToArray();
+
         // compute extension method name
         var methodName = source.Options.MethodOptions?.Name;
         if (methodName.IsNullOrWhiteSpace())
@@ -80,6 +85,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         var result = ServiceRegistrationWriter.GenerateExtensionClass(
             moduleRegistrations,
             serviceRegistrations,
+            staticObjectRegistrations,
             source.Options.AssemblyName,
             methodName,
             methodInternal);
@@ -92,18 +98,21 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     {
         return syntaxNode switch
         {
-            ClassDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
+            ClassDeclarationSyntax {AttributeLists.Count: > 0} declaration =>
                 !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
                 && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword),
 
-            RecordDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
+            RecordDeclarationSyntax {AttributeLists.Count: > 0} declaration =>
                 !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
                 && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword),
 
-            MemberDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
+            MethodDeclarationSyntax {AttributeLists.Count: > 0} declaration =>
                 !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword),
 
-            _ => false,
+            FieldDeclarationSyntax {AttributeLists.Count: > 0} declaration =>
+                ValidateFieldIsRegistable(declaration),
+
+            _ => false
         };
     }
 
@@ -114,8 +123,39 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ClassDeclarationSyntax => SemanticTransformClass(context),
             RecordDeclarationSyntax => SemanticTransformClass(context),
             MethodDeclarationSyntax => SemanticTransformMethod(context),
+            FieldDeclarationSyntax => SemanticTransformField(context),
             _ => null
         };
+    }
+
+    private static ServiceRegistrationContext? SemanticTransformField(GeneratorSyntaxContext context)
+    {
+        if (context.Node is not FieldDeclarationSyntax fieldDeclaration)
+            return null;
+
+        var fieldSymbol = fieldDeclaration.Declaration.Variables
+            .Select(x=>context.SemanticModel.GetDeclaredSymbol(x))
+            .OfType<IFieldSymbol>()
+            .FirstOrDefault();
+        if (fieldSymbol is null)
+            return null;
+
+        var attributes = fieldSymbol.GetAttributes();
+
+        // support multiple register attributes on a class
+        var registrations = new List<StaticObjectRegistration>();
+        foreach (var attribute in attributes)
+        {
+            var registration = CreateStaticObjectRegistration(fieldSymbol, attribute);
+            if (registration is not null)
+                registrations.Add(registration);
+        }
+
+        if (registrations.Count == 0)
+            return null;
+
+
+        return new ServiceRegistrationContext(StaticObjectRegistrations: registrations.ToArray());
     }
 
     private static ServiceRegistrationContext? SemanticTransformMethod(GeneratorSyntaxContext context)
@@ -175,6 +215,42 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return new ServiceRegistrationContext(ServiceRegistrations: registrations.ToArray());
     }
 
+    private static bool ValidateFieldIsRegistable(FieldDeclarationSyntax fieldDeclarationSyntax)
+    {
+        //check field is static and public, and that its declaring class is also public.
+        //so we could reference field and its value safely
+        var isFieldPublic = fieldDeclarationSyntax.Modifiers.Any(SyntaxKind.PublicKeyword);
+        var isFieldStatic = fieldDeclarationSyntax.Modifiers.Any(SyntaxKind.StaticKeyword);
+
+        if (!(isFieldPublic && isFieldStatic))
+            return false;
+
+        for (var node = fieldDeclarationSyntax.Parent; node != null; node = node.Parent)
+        {
+            if (node is ClassDeclarationSyntax classDeclarationSyntax)
+            {
+                if (!classDeclarationSyntax.Modifiers.Any(SyntaxKind.PublicKeyword))
+                    return false;
+            }
+            else if (node is BaseNamespaceDeclarationSyntax)
+            {
+                //skip remain
+                break;
+            }
+        }
+
+        //we only accept one variable in once declaration.
+        if (fieldDeclarationSyntax.Declaration.Variables.Count != 1)
+            return false;
+
+        //field must have a initializer or it nothing makes scene
+        var containInitializer = fieldDeclarationSyntax.Declaration.Variables.Any(x=>x.Initializer != null);
+        if (!containInitializer)
+            return false;
+
+        return true;
+    }
+
     private static (bool isValid, bool hasTagCollection) ValidateMethod(IMethodSymbol methodSymbol)
     {
         var hasServiceCollection = false;
@@ -196,13 +272,132 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             var parameterSymbol = methodSymbol.Parameters[1];
             hasTagCollection = IsStringCollection(parameterSymbol);
 
-            // to be valid, parameter 0 must be service collection and parameter 1 must be string collection, 
+            // to be valid, parameter 0 must be service collection and parameter 1 must be string collection,
             return (hasServiceCollection && hasTagCollection, hasTagCollection);
         }
 
         // invalid method
         return (false, false);
     }
+
+    private static StaticObjectRegistration? CreateStaticObjectRegistration(IFieldSymbol fieldSymbol, AttributeData attribute)
+    {
+        // check for known attribute
+        if (!IsKnownAttribute(attribute, out var serviceLifetime))
+            return null;
+
+        var classSymbol = fieldSymbol.ContainingType;
+
+        // defaults
+        var serviceTypes = new HashSet<string>();
+        string? duplicateStrategy = null;
+        string? registrationStrategy = null;
+        var tags = new HashSet<string>();
+        string? serviceKey = null;
+
+        var attributeClass = attribute.AttributeClass;
+        if (attributeClass is {IsGenericType: true} &&
+            attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
+            // if generic attribute, get service and implementation from generic type parameters
+            for (var index = 0; index < attributeClass.TypeParameters.Length; index++)
+            {
+                var typeParameter = attributeClass.TypeParameters[index];
+                var typeArgument = attributeClass.TypeArguments[index];
+
+                if (typeParameter.Name == "TService" || index == 0)
+                {
+                    var service = typeArgument.ToDisplayString(_fullyQualifiedNullableFormat);
+                    serviceTypes.Add(service);
+                }
+            }
+
+        foreach (var parameter in attribute.NamedArguments)
+        {
+            // match name with service registration configuration
+            var name = parameter.Key;
+            var value = parameter.Value.Value;
+
+            if (string.IsNullOrEmpty(name) || value == null)
+                continue;
+
+            switch (name)
+            {
+                case "ServiceType":
+                    var serviceTypeSymbol = value as INamedTypeSymbol;
+
+                    var serviceType = serviceTypeSymbol?.ToDisplayString(_fullyQualifiedNullableFormat) ??
+                                      value.ToString();
+                    serviceTypes.Add(serviceType);
+                    break;
+                case "ServiceKey":
+                    serviceKey = parameter.Value.ToCSharpString();
+                    break;
+                case "ImplementationType":
+                    //not support
+                    break;
+                case "Factory":
+                    //not support
+                    break;
+                case "Duplicate":
+                    duplicateStrategy = ResolveDuplicateStrategy(value);
+                    break;
+                case "Registration":
+                    registrationStrategy = ResolveRegistrationStrategy(value);
+                    break;
+                case "Tags":
+                    var tagsItems = value
+                        .ToString()
+                        .Split(',', ';')
+                        .Where(v => v.HasValue());
+
+                    foreach (var tagItem in tagsItems)
+                        tags.Add(tagItem);
+
+                    break;
+            }
+        }
+
+        // default to ignore duplicate service registrations
+        duplicateStrategy ??= KnownTypes.DuplicateStrategySkipShortName;
+
+        // if implementation and service types not set, default to self with interfaces
+        if (registrationStrategy == null
+            && serviceTypes.Count == 0)
+            registrationStrategy = KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+
+        // add implemented interfaces
+        var includeInterfaces = registrationStrategy is KnownTypes.RegistrationStrategyImplementedInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+        if (includeInterfaces)
+            foreach (var implementedInterface in classSymbol.AllInterfaces)
+            {
+                // This interface is typically not injected into services and, more specifically, record types auto-implement it.
+                if (implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
+                    continue;
+
+                var unboundInterface = ToUnboundGenericType(implementedInterface);
+
+                var interfaceName = unboundInterface.ToDisplayString(_fullyQualifiedNullableFormat);
+                serviceTypes.Add(interfaceName);
+            }
+
+        // add class attribute is on; default service type if not set
+        var includeSelf = registrationStrategy is KnownTypes.RegistrationStrategySelfShortName
+            or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+        if (includeSelf || serviceTypes.Count == 0)
+            serviceTypes.Add(fieldSymbol.Type.ToDisplayString(_fullyQualifiedNullableFormat));
+
+        return new StaticObjectRegistration(
+            ClassName: classSymbol.ToDisplayString(_fullyQualifiedNullableFormat),
+            MemberName: fieldSymbol.Name,
+            ServiceTypes: serviceTypes.ToArray(),
+            Duplicate: duplicateStrategy,
+            Tags: tags.ToArray(),
+            ServiceKey: serviceKey);
+    }
+
 
     private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
     {
@@ -389,8 +584,28 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             return true;
         }
 
+        if (IsStaticObjectAttribute(attribute))
+        {
+            serviceLifetime = KnownTypes.ServiceLifetimeSingletonFullName;
+            return true;
+        }
+
+
         serviceLifetime = KnownTypes.ServiceLifetimeTransientFullName;
         return false;
+    }
+
+    private static bool IsStaticObjectAttribute(AttributeData attribute)
+    {
+        return attribute?.AttributeClass is
+        {
+            Name: KnownTypes.StaticObjectAttributeShortName or KnownTypes.StaticObjectAttributeTypeName,
+            ContainingNamespace:
+            {
+                Name: "Attributes",
+                ContainingNamespace.Name: "Injectio"
+            }
+        };
     }
 
     private static bool IsTransientAttribute(AttributeData attribute)

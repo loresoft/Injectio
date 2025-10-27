@@ -29,8 +29,9 @@ public class ServiceRegistrationWriterTests
                 Tags: Array.Empty<string>()
             )
         };
+        var staticObjectRegistrations = new List<StaticObjectRegistration>();
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations,staticObjectRegistrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -59,8 +60,9 @@ public class ServiceRegistrationWriterTests
                 Tags : Array.Empty<string>()
             )
         };
+        var staticObjectRegistrations = new List<StaticObjectRegistration>();
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, staticObjectRegistrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -85,8 +87,10 @@ public class ServiceRegistrationWriterTests
                 Tags : Array.Empty<string>()
             )
         };
+        var staticObjectRegistrations = new List<StaticObjectRegistration>();
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
+
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, staticObjectRegistrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -111,8 +115,9 @@ public class ServiceRegistrationWriterTests
                 Tags : Array.Empty<string>()
             )
         };
+        var staticObjectRegistrations = new List<StaticObjectRegistration>();
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, staticObjectRegistrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
@@ -136,9 +141,10 @@ public class ServiceRegistrationWriterTests
                 Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
                 Tags: new[] { "Test", "Big" }
             )
-        };
+        };;
+        var staticObjectRegistrations = new List<StaticObjectRegistration>();
 
-        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
+        var result = ServiceRegistrationWriter.GenerateExtensionClass(modeulRegistrations, registrations, staticObjectRegistrations, nameof(ServiceRegistrationWriterTests), nameof(ServiceRegistrationWriterTests), null);
 
         return Verifier
             .Verify(result)
