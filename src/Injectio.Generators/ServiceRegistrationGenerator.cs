@@ -286,7 +286,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (!IsKnownAttribute(attribute, out var serviceLifetime))
             return null;
 
-        var classSymbol = fieldSymbol.ContainingType;
 
         // defaults
         var serviceTypes = new HashSet<string>();
@@ -370,7 +369,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
             or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
         if (includeInterfaces)
-            foreach (var implementedInterface in classSymbol.AllInterfaces)
+            foreach (var implementedInterface in fieldSymbol.Type.AllInterfaces)
             {
                 // This interface is typically not injected into services and, more specifically, record types auto-implement it.
                 if (implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
@@ -390,7 +389,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             serviceTypes.Add(fieldSymbol.Type.ToDisplayString(_fullyQualifiedNullableFormat));
 
         return new StaticObjectRegistration(
-            ClassName: classSymbol.ToDisplayString(_fullyQualifiedNullableFormat),
+            ClassName: fieldSymbol.ContainingType.ToDisplayString(_fullyQualifiedNullableFormat),
             MemberName: fieldSymbol.Name,
             ServiceTypes: serviceTypes.ToArray(),
             Duplicate: duplicateStrategy,
