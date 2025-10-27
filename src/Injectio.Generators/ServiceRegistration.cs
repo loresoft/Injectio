@@ -11,5 +11,6 @@ public record ServiceRegistration(
     string Duplicate,
     string Registration,
     EquatableArray<string> Tags,
+    FileLine? FileLine,
     bool IsOpenGeneric = false
 );

@@ -135,8 +135,10 @@ public static class ServiceRegistrationWriter
         IndentedStringBuilder codeBuilder,
         StaticObjectRegistration staticObjectRegistration)
     {
-        if (staticObjectRegistration.Tags.Count > 0)
+        var hasTags = staticObjectRegistration.Tags.Count > 0;
+        if (hasTags)
         {
+            WriteFileLine(codeBuilder, staticObjectRegistration.FileLine);
             codeBuilder
                 .Append("if (tagSet.Count == 0 || tagSet.Intersect(new[] { ");
 
@@ -167,16 +169,11 @@ public static class ServiceRegistrationWriter
             if (serviceType.IsNullOrWhiteSpace())
                 continue;
 
+            WriteFileLine(codeBuilder, staticObjectRegistration.FileLine);
             WriteServiceType(codeBuilder, staticObjectRegistration, serviceMethod, serviceType);
-            /*
-            if (staticObjectRegistration.IsOpenGeneric)
-                WriteServiceType(codeBuilder, staticObjectRegistration, serviceMethod, serviceType);
-            else
-                WriteServiceGeneric(codeBuilder, serviceRegistration, serviceMethod, serviceType);
-                */
         }
 
-        if (staticObjectRegistration.Tags.Count > 0)
+        if (hasTags)
         {
             codeBuilder
                 .DecrementIndent()
@@ -191,6 +188,7 @@ public static class ServiceRegistrationWriter
     {
         if (serviceRegistration.Tags.Count > 0)
         {
+            WriteFileLine(codeBuilder, serviceRegistration.FileLine);
             codeBuilder
                 .Append("if (tagSet.Count == 0 || tagSet.Intersect(new[] { ");
 
@@ -221,6 +219,7 @@ public static class ServiceRegistrationWriter
             if (serviceType.IsNullOrWhiteSpace())
                 continue;
 
+            WriteFileLine(codeBuilder, serviceRegistration.FileLine);
             if (serviceRegistration.IsOpenGeneric)
                 WriteServiceType(codeBuilder, serviceRegistration, serviceMethod, serviceType);
             else
@@ -420,6 +419,21 @@ public static class ServiceRegistrationWriter
             .DecrementIndent()
             .AppendLine(");")
             .AppendLine();
+    }
+
+    private static void WriteFileLine(
+        IndentedStringBuilder codeBuilder,
+        FileLine? fileLine)
+    {
+        if (fileLine is null || fileLine.FilePath.IsNullOrWhiteSpace())
+            return;
+
+        codeBuilder.Append("//");
+        codeBuilder.Append("generated from file: ");
+        codeBuilder.Append(fileLine.FilePath);
+        codeBuilder.Append(":");
+        codeBuilder.Append(fileLine.Line);
+        codeBuilder.AppendLine();
     }
 
     public static string GetServiceCollectionMethod(string duplicateStrategy)

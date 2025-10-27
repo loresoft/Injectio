@@ -394,9 +394,24 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ServiceTypes: serviceTypes.ToArray(),
             Duplicate: duplicateStrategy,
             Tags: tags.ToArray(),
+            FileLine: GetFileLine(attribute),
             ServiceKey: serviceKey);
     }
 
+    private static FileLine? GetFileLine(AttributeData attribute)
+    {
+        var attrSyntaxRef = attribute.ApplicationSyntaxReference;
+        if (attrSyntaxRef != null)
+        {
+            var location = attrSyntaxRef.SyntaxTree.GetLineSpan(attrSyntaxRef.Span);
+            var filePath = location.Path;
+            var line = location.StartLinePosition.Line + 1;
+            return new FileLine(filePath, line);
+        }
+
+        //maybe attrbute/field is from others like metadata.
+        return null;
+    }
 
     private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
     {
@@ -545,7 +560,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             Duplicate: duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
             Registration: registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
             Tags: tags.ToArray(),
-            IsOpenGeneric: isOpenGeneric);
+            IsOpenGeneric: isOpenGeneric,
+            FileLine: GetFileLine(attribute));
     }
 
     private static INamedTypeSymbol ToUnboundGenericType(INamedTypeSymbol typeSymbol)

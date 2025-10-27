@@ -26,7 +26,8 @@ public class ServiceRegistrationWriterTests
                 Factory: null,
                 Duplicate: KnownTypes.DuplicateStrategySkipShortName,
                 Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                Tags: Array.Empty<string>()
+                Tags: Array.Empty<string>(),
+                FileLine: default
             )
         };
         var staticObjectRegistrations = new List<StaticObjectRegistration>();
@@ -57,7 +58,8 @@ public class ServiceRegistrationWriterTests
                 Factory: null,
                 Duplicate: KnownTypes.DuplicateStrategySkipShortName,
                 Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                Tags : Array.Empty<string>()
+                Tags : Array.Empty<string>(),
+                FileLine: default
             )
         };
         var staticObjectRegistrations = new List<StaticObjectRegistration>();
@@ -84,7 +86,8 @@ public class ServiceRegistrationWriterTests
                 Factory: null,
                 Duplicate: KnownTypes.DuplicateStrategyAppendShortName,
                 Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                Tags : Array.Empty<string>()
+                Tags : Array.Empty<string>(),
+                FileLine: default
             )
         };
         var staticObjectRegistrations = new List<StaticObjectRegistration>();
@@ -112,7 +115,8 @@ public class ServiceRegistrationWriterTests
                 Factory: null,
                 Duplicate: KnownTypes.DuplicateStrategyReplaceTypeName,
                 Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                Tags : Array.Empty<string>()
+                Tags : Array.Empty<string>(),
+                FileLine: default
             )
         };
         var staticObjectRegistrations = new List<StaticObjectRegistration>();
@@ -139,7 +143,8 @@ public class ServiceRegistrationWriterTests
                 Factory: null,
                 Duplicate: KnownTypes.DuplicateStrategySkipShortName,
                 Registration: KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                Tags: new[] { "Test", "Big" }
+                Tags: new[] { "Test", "Big" },
+                FileLine: default
             )
         };;
         var staticObjectRegistrations = new List<StaticObjectRegistration>();

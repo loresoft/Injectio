@@ -6,5 +6,6 @@ public record StaticObjectRegistration(
     EquatableArray<string> ServiceTypes,
     string Duplicate,
     EquatableArray<string> Tags,
-    string ServiceKey
+    string? ServiceKey,
+    FileLine? FileLine
 );
