@@ -17,6 +17,72 @@ public interface IService3
 {
 }
 
+public interface IStaticObjectService
+{
+    string GetValue();
+}
+
+public interface IStaticObjectService2
+{
+
+}
+
+public class StaticObjectService2 : IStaticObjectService2
+{
+
+}
+
+public class StaticObjectService : IStaticObjectService
+{
+    private readonly string value;
+
+    public StaticObjectService(string value)
+    {
+        this.value = value;
+    }
+
+    public string GetValue()
+    {
+        return value;
+    }
+}
+
+public class StaticObjectExporter2
+{
+    [RegisterStaticObject(Registration = RegistrationStrategy.SelfWithInterfaces)]
+    public static StaticObjectService2 myService1 = new StaticObjectService2();
+}
+
+public class StaticObjectExporter1
+{
+    [RegisterStaticObject]
+    public static IStaticObjectService myService1 = new StaticObjectService("1");
+
+    [RegisterStaticObject]
+    public static StaticObjectService myService2 = new StaticObjectService("2");
+
+    [RegisterStaticObject<IStaticObjectService>]
+    public static StaticObjectService myService3 = new StaticObjectService("3");
+
+    [RegisterStaticObject(Tags = "Tag1,Tag2,Tag3")]
+    public static StaticObjectService myService4 = new StaticObjectService("4");
+
+    [RegisterStaticObject(ServiceKey = "ServiceKey1")]
+    public static StaticObjectService myService5 = new StaticObjectService("5");
+
+    [RegisterStaticObject(Registration = RegistrationStrategy.SelfWithInterfaces)]
+    public static StaticObjectService myService6 = new StaticObjectService("6");
+
+    [RegisterStaticObject(Duplicate = DuplicateStrategy.Append)]
+    public static StaticObjectService myService7 = new StaticObjectService("4");
+
+    [RegisterStaticObject(Tags = "DONT_EXPORT_ME", ServiceKey = "StaticObjectFilter")]
+    public static StaticObjectService myService8 = new StaticObjectService("8");
+
+    [RegisterStaticObject(Tags = "EXPORT_ME,Alpha", ServiceKey = "StaticObjectFilter")]
+    public static StaticObjectService myService9 = new StaticObjectService("9");
+}
+
 [RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces)]
 public class SingletonService3 : IService3
 {
