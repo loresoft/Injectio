@@ -19,6 +19,43 @@ public class LibraryServiceTests(ITestOutputHelper output, DependencyInjectionFi
         service1.Should().BeOfType<ServiceMultiple>();
     }
 
+
+    [Fact]
+    public void ShouldResolveStaticObjectInterface()
+    {
+        var service1 = Services.GetService<IStaticObjectService>();
+        service1.Should().NotBeNull();
+        service1.Should().BeOfType<StaticObjectService>();
+        Assert.True(!string.IsNullOrWhiteSpace(service1?.GetValue()));
+    }
+
+    [Fact]
+    public void ShouldResolveImplmentStaticObject()
+    {
+        var service1 = Services.GetService<StaticObjectService>();
+        service1.Should().NotBeNull();
+        service1.Should().BeOfType<StaticObjectService>();
+        Assert.True(!string.IsNullOrWhiteSpace(service1?.GetValue()));
+    }
+
+    [Fact]
+    public void ShouldResolveStaticObjectWithRegistration()
+    {
+        var service1 = Services.GetService<StaticObjectService2>();
+        service1.Should().NotBeNull();
+        var service2 = Services.GetService<IStaticObjectService2>();
+        service1.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ShouldResolveStaticObjectWithTagFilter()
+    {
+        var services = Services.GetKeyedServices<StaticObjectService>("StaticObjectFilter");
+        services.Should().NotBeNull();
+        services.Should().HaveCount(1);
+        Assert.Same("9", services.FirstOrDefault()?.GetValue());
+    }
+
     [Fact]
     public void ShouldResolveDuplicateStrategyAppend()
     {

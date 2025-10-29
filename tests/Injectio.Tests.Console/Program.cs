@@ -30,6 +30,8 @@ Console.WriteLine("Complete");
 
 public interface ILocalService { }
 
+public class StaticObjectService: ILocalService { }
+
 [RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces, Duplicate = DuplicateStrategy.Replace)]
 public class LocalService : ILocalService { }
 
@@ -96,4 +98,23 @@ public class ServiceRegistrationInstance
     {
 
     }
+}
+
+
+public class StaticObjectRegistrationInstance
+{
+    [RegisterStaticObject]
+    public static ILocalService myField1 = new StaticObjectService();
+
+    [RegisterStaticObject(Registration = RegistrationStrategy.SelfWithInterfaces)]
+    public static StaticObjectService myField2 = new StaticObjectService();
+
+    [RegisterStaticObject<ILocalService>]
+    public static StaticObjectService myField3 = new StaticObjectService();
+
+    [RegisterStaticObject(Tags = "Tag1,Tag2")]
+    public static ILocalService myField4 = new StaticObjectService();
+
+    [RegisterStaticObject(ServiceKey = "ServiceKey1")]
+    public static ILocalService myField5 = new StaticObjectService();
 }
