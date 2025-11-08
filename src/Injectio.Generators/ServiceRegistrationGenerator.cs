@@ -49,7 +49,17 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             })
             .WithTrackingName("Options");
 
-        var options = assemblyName.Combine(methodName);
+        var registerOption = context.AnalyzerConfigOptionsProvider
+            .Select(static (c, _) =>
+            {
+                if (!c.GlobalOptions.TryGetValue("build_property.InjectioDuplicateStrategy", out var duplicateStrategy))
+                    duplicateStrategy = KnownTypes.DuplicateStrategySkipShortName;
+
+                return new RegisterOptions(duplicateStrategy);
+            })
+            .WithTrackingName("RegisterOptions");
+
+        var options = assemblyName.Combine(methodName).Combine(registerOption);
         var generation = registrations.Combine(options);
 
         context.RegisterSourceOutput(generation, ExecuteGeneration);
@@ -57,7 +67,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private void ExecuteGeneration(
         SourceProductionContext sourceContext,
-        (ImmutableArray<ServiceRegistrationContext?> Registrations, (string? AssemblyName, MethodOptions? MethodOptions) Options) source)
+        (ImmutableArray<ServiceRegistrationContext?> Registrations, ((string? AssemblyName, MethodOptions MethodOptions) Options, RegisterOptions RegisterOptions) Options2) source)
     {
         var serviceRegistrations = source.Registrations
             .SelectMany(m => m?.ServiceRegistrations ?? Array.Empty<ServiceRegistration>())
@@ -75,20 +85,23 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .ToArray();
 
         // compute extension method name
-        var methodName = source.Options.MethodOptions?.Name;
+        var methodName = source.Options2.Options.MethodOptions?.Name;
+        var assemblyName = source.Options2.Options.AssemblyName;
         if (methodName.IsNullOrWhiteSpace())
-            methodName = Regex.Replace(source.Options.AssemblyName, "\\W", "");
+            methodName = Regex.Replace(assemblyName, "\\W", "");
 
-        var methodInternal = source.Options.MethodOptions?.Internal;
+        var methodInternal = source.Options2.Options.MethodOptions?.Internal;
+        var registerOption = source.Options2.RegisterOptions;
 
         // generate registration method
         var result = ServiceRegistrationWriter.GenerateExtensionClass(
             moduleRegistrations,
             serviceRegistrations,
             staticObjectRegistrations,
-            source.Options.AssemblyName,
+            assemblyName,
             methodName,
-            methodInternal);
+            methodInternal,
+            registerOption);
 
         // add source file
         sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
@@ -356,9 +369,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             }
         }
 
-        // default to ignore duplicate service registrations
-        duplicateStrategy ??= KnownTypes.DuplicateStrategySkipShortName;
-
         // if implementation and service types not set, default to self with interfaces
         if (registrationStrategy == null
             && serviceTypes.Count == 0)
@@ -499,9 +509,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             }
         }
 
-        // default to ignore duplicate service registrations
-        duplicateStrategy ??= KnownTypes.DuplicateStrategySkipShortName;
-
         // if implementation and service types not set, default to self with interfaces
         if (registrationStrategy == null
             && implementationType == null
@@ -557,7 +564,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ServiceTypes: serviceTypes.ToArray(),
             ServiceKey: serviceKey,
             Factory: implementationFactory,
-            Duplicate: duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
+            Duplicate: duplicateStrategy,
             Registration: registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
             Tags: tags.ToArray(),
             IsOpenGeneric: isOpenGeneric,

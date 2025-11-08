@@ -5,13 +5,13 @@ namespace Injectio.Generators;
 public static class ServiceRegistrationWriter
 {
 
-    public static string GenerateExtensionClass(
-        IReadOnlyList<ModuleRegistration> moduleRegistrations,
+    public static string GenerateExtensionClass(IReadOnlyList<ModuleRegistration> moduleRegistrations,
         IReadOnlyList<ServiceRegistration> serviceRegistrations,
         IReadOnlyList<StaticObjectRegistration> staticObjectRegistrations,
         string? assemblyName,
         string? methodName,
-        string? methodInternal)
+        string? methodInternal,
+        RegisterOptions registerOption)
     {
         var codeBuilder = new IndentedStringBuilder();
         codeBuilder
@@ -64,12 +64,12 @@ public static class ServiceRegistrationWriter
 
         foreach (var serviceRegistration in serviceRegistrations)
         {
-            WriteRegistration(codeBuilder, serviceRegistration);
+            WriteRegistration(codeBuilder, serviceRegistration, registerOption);
         }
 
         foreach (var staticObjectRegistration in staticObjectRegistrations)
         {
-            WriteRegistration(codeBuilder, staticObjectRegistration);
+            WriteRegistration(codeBuilder, staticObjectRegistration, registerOption);
         }
 
         codeBuilder
@@ -131,9 +131,9 @@ public static class ServiceRegistrationWriter
         return moduleCount;
     }
 
-    private static void WriteRegistration(
-        IndentedStringBuilder codeBuilder,
-        StaticObjectRegistration staticObjectRegistration)
+    private static void WriteRegistration(IndentedStringBuilder codeBuilder,
+        StaticObjectRegistration staticObjectRegistration,
+        RegisterOptions registerOption)
     {
         var hasTags = staticObjectRegistration.Tags.Count > 0;
         if (hasTags)
@@ -162,7 +162,7 @@ public static class ServiceRegistrationWriter
                 .IncrementIndent();
         }
 
-        var serviceMethod = GetServiceCollectionMethod(staticObjectRegistration.Duplicate);
+        var serviceMethod = GetServiceCollectionMethod(staticObjectRegistration.Duplicate ?? registerOption.DuplicateStrategy);
 
         foreach (var serviceType in staticObjectRegistration.ServiceTypes)
         {
@@ -182,9 +182,9 @@ public static class ServiceRegistrationWriter
         }
     }
 
-    private static void WriteRegistration(
-        IndentedStringBuilder codeBuilder,
-        ServiceRegistration serviceRegistration)
+    private static void WriteRegistration(IndentedStringBuilder codeBuilder,
+        ServiceRegistration serviceRegistration,
+        RegisterOptions registerOption)
     {
         if (serviceRegistration.Tags.Count > 0)
         {
@@ -212,7 +212,7 @@ public static class ServiceRegistrationWriter
                 .IncrementIndent();
         }
 
-        var serviceMethod = GetServiceCollectionMethod(serviceRegistration.Duplicate);
+        var serviceMethod = GetServiceCollectionMethod(serviceRegistration.Duplicate ?? registerOption.DuplicateStrategy);
 
         foreach (var serviceType in serviceRegistration.ServiceTypes)
         {

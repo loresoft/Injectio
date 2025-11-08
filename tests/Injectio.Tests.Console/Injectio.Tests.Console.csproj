@@ -14,9 +14,11 @@
 
   <PropertyGroup>
     <InjectioName>ConsoleLibrary</InjectioName>
+    <InjectioDuplicateStrategy>Append</InjectioDuplicateStrategy>
   </PropertyGroup>
   <ItemGroup>
     <CompilerVisibleProperty Include="InjectioName" />
+    <CompilerVisibleProperty Include="InjectioDuplicateStrategy" />
   </ItemGroup>
 
   <ItemGroup>

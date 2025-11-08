@@ -8,7 +8,7 @@ public record ServiceRegistration(
     EquatableArray<string> ServiceTypes,
     string? ServiceKey,
     string? Factory,
-    string Duplicate,
+    string? Duplicate,
     string Registration,
     EquatableArray<string> Tags,
     FileLine? FileLine,
