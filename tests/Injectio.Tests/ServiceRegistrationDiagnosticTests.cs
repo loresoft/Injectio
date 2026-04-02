@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 
 using AwesomeAssertions;
 
@@ -9,6 +10,7 @@ using Injectio.Generators;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
@@ -18,7 +20,7 @@ namespace Injectio.Tests;
 public class ServiceRegistrationDiagnosticTests
 {
     [Fact]
-    public void DiagnoseRegisterServicesInvalidFirstParameter()
+    public async Task DiagnoseRegisterServicesInvalidFirstParameter()
     {
         var source = @"
 using Injectio.Attributes;
@@ -34,13 +36,13 @@ public static class RegistrationModule
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0001");
     }
 
     [Fact]
-    public void DiagnoseRegisterServicesInvalidSecondParameter()
+    public async Task DiagnoseRegisterServicesInvalidSecondParameter()
     {
         var source = @"
 using Injectio.Attributes;
@@ -57,13 +59,13 @@ public static class RegistrationModule
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0002");
     }
 
     [Fact]
-    public void DiagnoseRegisterServicesTooManyParameters()
+    public async Task DiagnoseRegisterServicesTooManyParameters()
     {
         var source = @"
 using Injectio.Attributes;
@@ -80,13 +82,13 @@ public static class RegistrationModule
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0003");
     }
 
     [Fact]
-    public void DiagnoseRegisterServicesNoParameters()
+    public async Task DiagnoseRegisterServicesNoParameters()
     {
         var source = @"
 using Injectio.Attributes;
@@ -102,13 +104,13 @@ public static class RegistrationModule
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0001");
     }
 
     [Fact]
-    public void DiagnoseFactoryMethodNotFound()
+    public async Task DiagnoseFactoryMethodNotFound()
     {
         var source = @"
 using Injectio.Attributes;
@@ -123,13 +125,13 @@ public class MyService : IService
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0004");
     }
 
     [Fact]
-    public void DiagnoseFactoryMethodNotStatic()
+    public async Task DiagnoseFactoryMethodNotStatic()
     {
         var source = @"
 using System;
@@ -149,13 +151,13 @@ public class MyService : IService
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0005");
     }
 
     [Fact]
-    public void DiagnoseFactoryMethodInvalidSignature()
+    public async Task DiagnoseFactoryMethodInvalidSignature()
     {
         var source = @"
 using Injectio.Attributes;
@@ -174,13 +176,13 @@ public class MyService : IService
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0006");
     }
 
     [Fact]
-    public void DiagnoseServiceTypeMismatch()
+    public async Task DiagnoseServiceTypeMismatch()
     {
         var source = @"
 using Injectio.Attributes;
@@ -196,13 +198,13 @@ public class MyService : IService
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0007");
     }
 
     [Fact]
-    public void DiagnoseRegisterServicesOnAbstractClassNonStaticMethod()
+    public async Task DiagnoseRegisterServicesOnAbstractClassNonStaticMethod()
     {
         var source = @"
 using Injectio.Attributes;
@@ -219,13 +221,13 @@ public abstract class RegistrationModule
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "INJECT0009");
     }
 
     [Fact]
-    public void NoDiagnosticsForValidRegistration()
+    public async Task NoDiagnosticsForValidRegistration()
     {
         var source = @"
 using Injectio.Attributes;
@@ -240,13 +242,13 @@ public class MyService : IService
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().BeEmpty();
     }
 
     [Fact]
-    public void NoDiagnosticsForValidFactory()
+    public async Task NoDiagnosticsForValidFactory()
     {
         var source = @"
 using System;
@@ -266,13 +268,13 @@ public class MyService : IService
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().BeEmpty();
     }
 
     [Fact]
-    public void NoDiagnosticsForValidKeyedFactory()
+    public async Task NoDiagnosticsForValidKeyedFactory()
     {
         var source = @"
 using System;
@@ -292,13 +294,13 @@ public class MyService : IService
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().BeEmpty();
     }
 
     [Fact]
-    public void NoDiagnosticsForValidRegisterServicesMethod()
+    public async Task NoDiagnosticsForValidRegisterServicesMethod()
     {
         var source = @"
 using Injectio.Attributes;
@@ -315,13 +317,13 @@ public static class RegistrationModule
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().BeEmpty();
     }
 
     [Fact]
-    public void NoDiagnosticsForValidRegisterServicesWithTags()
+    public async Task NoDiagnosticsForValidRegisterServicesWithTags()
     {
         var source = @"
 using System.Collections.Generic;
@@ -339,12 +341,12 @@ public static class RegistrationModule
 }
 ";
 
-        var diagnostics = GetDiagnostics(source);
+        var diagnostics = await GetDiagnosticsAsync(source);
 
         diagnostics.Should().BeEmpty();
     }
 
-    private static ImmutableArray<Diagnostic> GetDiagnostics(string source)
+    private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
         var references = AppDomain.CurrentDomain.GetAssemblies()
@@ -363,11 +365,11 @@ public static class RegistrationModule
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        var generator = new ServiceRegistrationGenerator();
-        var driver = CSharpGeneratorDriver.Create(generator);
-        driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out var diagnostics);
+        var analyzer = new ServiceRegistrationAnalyzer();
+        var compilationWithAnalyzers = compilation.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(analyzer));
+        var diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
 
-        // return only Injectio diagnostics (INJECT*)
+        // return only Injectio diagnostics
         return diagnostics
             .Where(d => d.Id.StartsWith("INJECT"))
             .ToImmutableArray();

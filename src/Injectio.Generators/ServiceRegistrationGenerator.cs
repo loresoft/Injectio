@@ -29,9 +29,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             )
             .Where(static context =>
                 context is not null
-                && (context.ServiceRegistrations?.Count > 0
-                    || context.ModuleRegistrations?.Count > 0
-                    || context.Diagnostics?.Count > 0)
+                && (context.ServiceRegistrations?.Count > 0 || context.ModuleRegistrations?.Count > 0)
             )
             .Collect()
             .WithTrackingName("Registrations");
@@ -61,29 +59,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         SourceProductionContext sourceContext,
         (ImmutableArray<ServiceRegistrationContext?> Registrations, (string? AssemblyName, MethodOptions? MethodOptions) Options) source)
     {
-        // report all collected diagnostics
-        foreach (var context in source.Registrations)
-        {
-            if (context?.Diagnostics is null)
-                continue;
-
-            foreach (var diagnosticInfo in context.Diagnostics)
-            {
-                var descriptor = GetDescriptorById(diagnosticInfo.Id);
-                var location = Location.Create(
-                    diagnosticInfo.FilePath,
-                    diagnosticInfo.TextSpan,
-                    diagnosticInfo.LineSpan);
-
-                var diagnostic = Diagnostic.Create(
-                    descriptor,
-                    location,
-                    diagnosticInfo.MessageArguments.AsArray());
-
-                sourceContext.ReportDiagnostic(diagnostic);
-            }
-        }
-
         var serviceRegistrations = source.Registrations
             .SelectMany(m => m?.ServiceRegistrations ?? Array.Empty<ServiceRegistration>())
             .Where(m => m is not null)
@@ -158,21 +133,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (!isKnown)
             return null;
 
-        var diagnostics = new List<DiagnosticInfo>();
-
-        // warn if non-static method on abstract class (can't instantiate to call it)
-        if (!methodSymbol.IsStatic && methodSymbol.ContainingType.IsAbstract)
-        {
-            diagnostics.Add(CreateDiagnosticInfo(
-                DiagnosticDescriptors.RegisterServicesMethodOnAbstractClass,
-                methodDeclaration.Identifier.GetLocation(),
-                methodSymbol.Name,
-                methodSymbol.ContainingType.ToDisplayString(_fullyQualifiedNullableFormat)));
-        }
-
-        var (isValid, hasTagCollection) = ValidateMethod(methodSymbol, methodDeclaration, diagnostics);
+        var (isValid, hasTagCollection) = ValidateMethod(methodSymbol);
         if (!isValid)
-            return new ServiceRegistrationContext(Diagnostics: diagnostics.ToArray());
+            return null;
 
         var registration = new ModuleRegistration
         (
@@ -182,9 +145,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             HasTagCollection: hasTagCollection
         );
 
-        return new ServiceRegistrationContext(
-            ModuleRegistrations: new[] { registration },
-            Diagnostics: diagnostics.Count > 0 ? diagnostics.ToArray() : null);
+        return new ServiceRegistrationContext(ModuleRegistrations: new[] { registration });
     }
 
     private static ServiceRegistrationContext? SemanticTransformClass(GeneratorSyntaxContext context)
@@ -200,93 +161,50 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         // support multiple register attributes on a class
         var registrations = new List<ServiceRegistration>();
-        var diagnostics = new List<DiagnosticInfo>();
 
         foreach (var attribute in attributes)
         {
-            var registration = CreateServiceRegistration(classSymbol, attribute, declaration, diagnostics);
+            var registration = CreateServiceRegistration(classSymbol, attribute);
             if (registration is not null)
                 registrations.Add(registration);
         }
 
-        if (registrations.Count == 0 && diagnostics.Count == 0)
+        if (registrations.Count == 0)
             return null;
 
-        return new ServiceRegistrationContext(
-            ServiceRegistrations: registrations.Count > 0 ? registrations.ToArray() : null,
-            Diagnostics: diagnostics.Count > 0 ? diagnostics.ToArray() : null);
+        return new ServiceRegistrationContext(ServiceRegistrations: registrations.ToArray());
     }
 
-    private static (bool isValid, bool hasTagCollection) ValidateMethod(
-        IMethodSymbol methodSymbol,
-        MethodDeclarationSyntax methodDeclaration,
-        List<DiagnosticInfo> diagnostics)
+    private static (bool isValid, bool hasTagCollection) ValidateMethod(IMethodSymbol methodSymbol)
     {
-        // too many parameters
-        if (methodSymbol.Parameters.Length > 2)
-        {
-            diagnostics.Add(CreateDiagnosticInfo(
-                DiagnosticDescriptors.MethodTooManyParameters,
-                methodDeclaration.Identifier.GetLocation(),
-                methodSymbol.Name,
-                methodSymbol.Parameters.Length.ToString()));
-
-            return (false, false);
-        }
-
-        // no parameters at all
-        if (methodSymbol.Parameters.Length == 0)
-        {
-            diagnostics.Add(CreateDiagnosticInfo(
-                DiagnosticDescriptors.InvalidMethodSignature,
-                methodDeclaration.Identifier.GetLocation(),
-                methodSymbol.Name));
-
-            return (false, false);
-        }
-
         var hasServiceCollection = false;
         var hasTagCollection = false;
 
         // validate first parameter should be service collection
-        var firstParam = methodSymbol.Parameters[0];
-        hasServiceCollection = IsServiceCollection(firstParam);
-
-        if (!hasServiceCollection)
+        if (methodSymbol.Parameters.Length is 1 or 2)
         {
-            diagnostics.Add(CreateDiagnosticInfo(
-                DiagnosticDescriptors.InvalidMethodSignature,
-                methodDeclaration.Identifier.GetLocation(),
-                methodSymbol.Name));
-
-            return (false, false);
+            var parameterSymbol = methodSymbol.Parameters[0];
+            hasServiceCollection = IsServiceCollection(parameterSymbol);
         }
 
-        if (methodSymbol.Parameters.Length == 1)
-            return (true, false);
+        if (methodSymbol.Parameters.Length is 1)
+            return (hasServiceCollection, false);
 
         // validate second parameter should be string collection
-        var secondParam = methodSymbol.Parameters[1];
-        hasTagCollection = IsStringCollection(secondParam);
-
-        if (!hasTagCollection)
+        if (methodSymbol.Parameters.Length is 2)
         {
-            diagnostics.Add(CreateDiagnosticInfo(
-                DiagnosticDescriptors.InvalidMethodSecondParameter,
-                methodDeclaration.Identifier.GetLocation(),
-                methodSymbol.Name));
+            var parameterSymbol = methodSymbol.Parameters[1];
+            hasTagCollection = IsStringCollection(parameterSymbol);
 
-            return (false, false);
+            // to be valid, parameter 0 must be service collection and parameter 1 must be string collection,
+            return (hasServiceCollection && hasTagCollection, hasTagCollection);
         }
 
-        return (true, hasTagCollection);
+        // invalid method
+        return (false, false);
     }
 
-    private static ServiceRegistration? CreateServiceRegistration(
-        INamedTypeSymbol classSymbol,
-        AttributeData attribute,
-        TypeDeclarationSyntax declaration,
-        List<DiagnosticInfo> diagnostics)
+    private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
     {
         // check for known attribute
         if (!IsKnownAttribute(attribute, out var serviceLifetime))
@@ -423,24 +341,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         if (registrationStrategy is KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName && isOpenGeneric)
             registrationStrategy = KnownTypes.RegistrationStrategySelfWithInterfacesShortName;
-
-        // validate abstract implementation type without factory
-        if (classSymbol.IsAbstract && implementationFactory.IsNullOrWhiteSpace() && implementationType == classSymbol.ToDisplayString(_fullyQualifiedNullableFormat))
-        {
-            diagnostics.Add(CreateDiagnosticInfo(
-                DiagnosticDescriptors.AbstractImplementationType,
-                declaration.Identifier.GetLocation(),
-                implementationType!));
-        }
-
-        // validate factory method
-        if (implementationFactory.HasValue())
-        {
-            ValidateFactoryMethod(classSymbol, implementationFactory!, declaration, diagnostics);
-        }
-
-        // validate service type assignability
-        ValidateServiceTypes(classSymbol, serviceTypes, declaration, diagnostics);
 
         return new ServiceRegistration(
             Lifetime: serviceLifetime,
@@ -625,164 +525,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             },
             string text => text,
             _ => KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
-        };
-    }
-
-    private static void ValidateFactoryMethod(
-        INamedTypeSymbol classSymbol,
-        string factoryMethodName,
-        TypeDeclarationSyntax declaration,
-        List<DiagnosticInfo> diagnostics)
-    {
-        var className = classSymbol.ToDisplayString(_fullyQualifiedNullableFormat);
-
-        // look for method on the implementation type
-        var members = classSymbol.GetMembers(factoryMethodName);
-        var factoryMethods = members.OfType<IMethodSymbol>().ToArray();
-
-        if (factoryMethods.Length == 0)
-        {
-            diagnostics.Add(CreateDiagnosticInfo(
-                DiagnosticDescriptors.FactoryMethodNotFound,
-                declaration.Identifier.GetLocation(),
-                factoryMethodName,
-                className));
-            return;
-        }
-
-        foreach (var method in factoryMethods)
-        {
-            if (!method.IsStatic)
-            {
-                diagnostics.Add(CreateDiagnosticInfo(
-                    DiagnosticDescriptors.FactoryMethodNotStatic,
-                    declaration.Identifier.GetLocation(),
-                    factoryMethodName,
-                    className));
-                return;
-            }
-
-            // validate signature: (IServiceProvider) or (IServiceProvider, object?)
-            if (method.Parameters.Length is not (1 or 2))
-            {
-                diagnostics.Add(CreateDiagnosticInfo(
-                    DiagnosticDescriptors.FactoryMethodInvalidSignature,
-                    declaration.Identifier.GetLocation(),
-                    factoryMethodName,
-                    className));
-                return;
-            }
-
-            var firstParam = method.Parameters[0];
-            if (!IsServiceProvider(firstParam))
-            {
-                diagnostics.Add(CreateDiagnosticInfo(
-                    DiagnosticDescriptors.FactoryMethodInvalidSignature,
-                    declaration.Identifier.GetLocation(),
-                    factoryMethodName,
-                    className));
-            }
-        }
-    }
-
-    private static void ValidateServiceTypes(
-        INamedTypeSymbol classSymbol,
-        HashSet<string> serviceTypes,
-        TypeDeclarationSyntax declaration,
-        List<DiagnosticInfo> diagnostics)
-    {
-        var implTypeName = classSymbol.ToDisplayString(_fullyQualifiedNullableFormat);
-
-        foreach (var serviceType in serviceTypes)
-        {
-            // skip self-registration
-            if (serviceType == implTypeName)
-                continue;
-
-            // check if the class implements the service type by comparing display strings
-            var implementsService = false;
-
-            foreach (var iface in classSymbol.AllInterfaces)
-            {
-                var unboundInterface = ToUnboundGenericType(iface);
-                var ifaceName = unboundInterface.ToDisplayString(_fullyQualifiedNullableFormat);
-                if (ifaceName == serviceType)
-                {
-                    implementsService = true;
-                    break;
-                }
-            }
-
-            if (!implementsService)
-            {
-                // also check base types
-                var baseType = classSymbol.BaseType;
-                while (baseType is not null)
-                {
-                    var unboundBase = ToUnboundGenericType(baseType);
-                    var baseName = unboundBase.ToDisplayString(_fullyQualifiedNullableFormat);
-                    if (baseName == serviceType)
-                    {
-                        implementsService = true;
-                        break;
-                    }
-                    baseType = baseType.BaseType;
-                }
-            }
-
-            if (!implementsService)
-            {
-                diagnostics.Add(CreateDiagnosticInfo(
-                    DiagnosticDescriptors.ServiceTypeMismatch,
-                    declaration.Identifier.GetLocation(),
-                    implTypeName,
-                    serviceType));
-            }
-        }
-    }
-
-    private static bool IsServiceProvider(IParameterSymbol parameterSymbol)
-    {
-        return parameterSymbol?.Type is
-        {
-            Name: "IServiceProvider",
-            ContainingNamespace:
-            {
-                Name: "System",
-                ContainingNamespace.IsGlobalNamespace: true
-            }
-        };
-    }
-
-    private static DiagnosticInfo CreateDiagnosticInfo(
-        DiagnosticDescriptor descriptor,
-        Location location,
-        params string[] messageArgs)
-    {
-        var lineSpan = location.GetLineSpan();
-
-        return new DiagnosticInfo(
-            Id: descriptor.Id,
-            FilePath: lineSpan.Path ?? string.Empty,
-            TextSpan: location.SourceSpan,
-            LineSpan: lineSpan.Span,
-            MessageArguments: messageArgs);
-    }
-
-    internal static DiagnosticDescriptor GetDescriptorById(string id)
-    {
-        return id switch
-        {
-            "INJECT0001" => DiagnosticDescriptors.InvalidMethodSignature,
-            "INJECT0002" => DiagnosticDescriptors.InvalidMethodSecondParameter,
-            "INJECT0003" => DiagnosticDescriptors.MethodTooManyParameters,
-            "INJECT0004" => DiagnosticDescriptors.FactoryMethodNotFound,
-            "INJECT0005" => DiagnosticDescriptors.FactoryMethodNotStatic,
-            "INJECT0006" => DiagnosticDescriptors.FactoryMethodInvalidSignature,
-            "INJECT0007" => DiagnosticDescriptors.ServiceTypeMismatch,
-            "INJECT0008" => DiagnosticDescriptors.AbstractImplementationType,
-            "INJECT0009" => DiagnosticDescriptors.RegisterServicesMethodOnAbstractClass,
-            _ => throw new ArgumentException($"Unknown diagnostic ID: {id}")
         };
     }
 }

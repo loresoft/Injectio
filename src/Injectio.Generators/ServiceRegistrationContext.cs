@@ -6,6 +6,5 @@ namespace Injectio.Generators;
 
 public record ServiceRegistrationContext(
     EquatableArray<ServiceRegistration>? ServiceRegistrations = null,
-    EquatableArray<ModuleRegistration>? ModuleRegistrations = null,
-    EquatableArray<DiagnosticInfo>? Diagnostics = null
+    EquatableArray<ModuleRegistration>? ModuleRegistrations = null
 );
