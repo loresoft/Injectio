@@ -1,4 +1,4 @@
-using Xunit.Abstractions;
+using Xunit;
 
 using XUnit.Hosting;
 

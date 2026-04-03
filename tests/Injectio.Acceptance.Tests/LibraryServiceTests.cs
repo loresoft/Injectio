@@ -4,7 +4,7 @@ using Injectio.Tests.Library;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Injectio.Acceptance.Tests;
 
