@@ -227,6 +227,53 @@ public abstract class RegistrationModule
     }
 
     [Fact]
+    public async Task DiagnoseAbstractImplementationTypeWithoutFactory()
+    {
+        var source = @"
+using Injectio.Attributes;
+
+namespace Injectio.Sample;
+
+public interface IService { }
+
+[RegisterSingleton]
+public abstract class AbstractService : IService
+{
+}
+";
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0008");
+    }
+
+    [Fact]
+    public async Task NoDiagnosticsForAbstractImplementationTypeWithFactory()
+    {
+        var source = @"
+using System;
+using Injectio.Attributes;
+
+namespace Injectio.Sample;
+
+public interface IService { }
+
+[RegisterSingleton(ServiceType = typeof(IService), Factory = nameof(Create))]
+public abstract class AbstractService : IService
+{
+    public static IService Create(IServiceProvider serviceProvider)
+    {
+        return null!;
+    }
+}
+";
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task NoDiagnosticsForValidRegistration()
     {
         var source = @"

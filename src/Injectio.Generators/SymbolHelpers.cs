@@ -106,22 +106,28 @@ internal static class SymbolHelpers
     {
         var type = parameterSymbol?.Type as INamedTypeSymbol;
 
-        return type is
-        {
-            Name: "IEnumerable" or "IReadOnlySet" or "IReadOnlyCollection" or "ICollection" or "ISet" or "HashSet",
-            IsGenericType: true,
-            TypeArguments.Length: 1,
-            TypeParameters.Length: 1,
-            ContainingNamespace:
+        if (type is not
             {
-                Name: "Generic",
+                Name: "IEnumerable" or "IReadOnlySet" or "IReadOnlyCollection" or "ICollection" or "ISet" or "HashSet",
+                IsGenericType: true,
+                TypeArguments.Length: 1,
+                TypeParameters.Length: 1,
                 ContainingNamespace:
                 {
-                    Name: "Collections",
-                    ContainingNamespace.Name: "System"
+                    Name: "Generic",
+                    ContainingNamespace:
+                    {
+                        Name: "Collections",
+                        ContainingNamespace.Name: "System"
+                    }
                 }
-            }
-        };
+            })
+        {
+            return false;
+        }
+
+        // verify the generic argument is string
+        return type.TypeArguments[0].SpecialType == SpecialType.System_String;
     }
 
     public static bool IsServiceProvider(IParameterSymbol parameterSymbol)

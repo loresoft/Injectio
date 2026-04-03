@@ -119,7 +119,7 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         if (context.Symbol is not INamedTypeSymbol classSymbol)
             return;
 
-        if (classSymbol.IsAbstract || classSymbol.IsStatic)
+        if (classSymbol.IsStatic)
             return;
 
         var attributes = classSymbol.GetAttributes();
@@ -272,37 +272,38 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        // find at least one valid overload; only report if none exist
+        var hasStaticOverload = false;
+
         foreach (var method in factoryMethods)
         {
             if (!method.IsStatic)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.FactoryMethodNotStatic,
-                    location,
-                    factoryMethodName,
-                    className));
-                return;
-            }
+                continue;
+
+            hasStaticOverload = true;
 
             if (method.Parameters.Length is not (1 or 2))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.FactoryMethodInvalidSignature,
-                    location,
-                    factoryMethodName,
-                    className));
-                return;
-            }
+                continue;
 
             if (!SymbolHelpers.IsServiceProvider(method.Parameters[0]))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.FactoryMethodInvalidSignature,
-                    location,
-                    factoryMethodName,
-                    className));
-            }
+                continue;
+
+            // validate second parameter is object? (for keyed services)
+            if (method.Parameters.Length == 2
+                && method.Parameters[1].Type.SpecialType != SpecialType.System_Object)
+                continue;
+
+            // found a valid overload
+            return;
         }
+
+        context.ReportDiagnostic(Diagnostic.Create(
+            hasStaticOverload
+                ? DiagnosticDescriptors.FactoryMethodInvalidSignature
+                : DiagnosticDescriptors.FactoryMethodNotStatic,
+            location,
+            factoryMethodName,
+            className));
     }
 
     private static void ValidateServiceTypes(
