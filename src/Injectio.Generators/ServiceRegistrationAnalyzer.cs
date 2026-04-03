@@ -331,7 +331,7 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
                 // also check unbound generic form (e.g. IOpenGeneric<> vs IOpenGeneric<T>)
                 var unboundIface = SymbolHelpers.ToUnboundGenericType(iface);
-                if (unboundIface != iface)
+                if (!SymbolEqualityComparer.Default.Equals(unboundIface, iface))
                 {
                     var unboundName = unboundIface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
                     if (unboundName == serviceType)
@@ -355,7 +355,7 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
                     }
 
                     var unboundBase = SymbolHelpers.ToUnboundGenericType(baseType);
-                    if (unboundBase != baseType)
+                    if (!SymbolEqualityComparer.Default.Equals(unboundBase, baseType))
                     {
                         var unboundBaseName = unboundBase.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
                         if (unboundBaseName == serviceType)

@@ -4,12 +4,10 @@ using Injectio.Tests.Library;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using Xunit;
-
 namespace Injectio.Acceptance.Tests;
 
 [Collection(DependencyInjectionCollection.CollectionName)]
-public class LibraryServiceTests(ITestOutputHelper output, DependencyInjectionFixture fixture) : DependencyInjectionBase(output, fixture)
+public class LibraryServiceTests(DependencyInjectionFixture fixture) : DependencyInjectionBase(fixture)
 {
     [Fact]
     public void ShouldResolveService()
