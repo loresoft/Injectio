@@ -299,7 +299,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         // no implementation type set, use class attribute is on
         if (implementationType.IsNullOrWhiteSpace())
         {
-            var unboundType = ToUnboundGenericType(classSymbol);
+            var unboundType = SymbolHelpers.ToUnboundGenericType(classSymbol);
             isOpenGeneric = isOpenGeneric || IsOpenGeneric(unboundType);
             implementationType = unboundType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
         }
@@ -316,7 +316,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 if (implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
                     continue;
 
-                var unboundInterface = ToUnboundGenericType(implementedInterface);
+                var unboundInterface = SymbolHelpers.ToUnboundGenericType(implementedInterface);
                 isOpenGeneric = isOpenGeneric || IsOpenGeneric(unboundInterface);
 
                 var interfaceName = unboundInterface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
@@ -347,21 +347,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             Registration: registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
             Tags: tags.ToArray(),
             IsOpenGeneric: isOpenGeneric);
-    }
-
-    private static INamedTypeSymbol ToUnboundGenericType(INamedTypeSymbol typeSymbol)
-    {
-        if (!typeSymbol.IsGenericType || typeSymbol.IsUnboundGenericType)
-            return typeSymbol;
-
-        foreach (var typeArgument in typeSymbol.TypeArguments)
-        {
-            // If TypeKind is TypeParameter, it's actually the name of a locally declared type-parameter -> placeholder
-            if (typeArgument.TypeKind != TypeKind.TypeParameter)
-                return typeSymbol;
-        }
-
-        return typeSymbol.ConstructUnboundGenericType();
     }
 
     private static bool IsOpenGeneric(INamedTypeSymbol? typeSymbol)

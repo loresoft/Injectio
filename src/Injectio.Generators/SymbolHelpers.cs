@@ -137,6 +137,21 @@ internal static class SymbolHelpers
         };
     }
 
+    public static INamedTypeSymbol ToUnboundGenericType(INamedTypeSymbol typeSymbol)
+    {
+        if (!typeSymbol.IsGenericType || typeSymbol.IsUnboundGenericType)
+            return typeSymbol;
+
+        foreach (var typeArgument in typeSymbol.TypeArguments)
+        {
+            // If TypeKind is TypeParameter, it's actually the name of a locally declared type-parameter -> placeholder
+            if (typeArgument.TypeKind != TypeKind.TypeParameter)
+                return typeSymbol;
+        }
+
+        return typeSymbol.ConstructUnboundGenericType();
+    }
+
     public static string ResolveRegistrationStrategy(object? value)
     {
         return value switch

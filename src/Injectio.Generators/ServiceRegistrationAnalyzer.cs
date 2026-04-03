@@ -328,6 +328,18 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
                     implementsService = true;
                     break;
                 }
+
+                // also check unbound generic form (e.g. IOpenGeneric<> vs IOpenGeneric<T>)
+                var unboundIface = SymbolHelpers.ToUnboundGenericType(iface);
+                if (unboundIface != iface)
+                {
+                    var unboundName = unboundIface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    if (unboundName == serviceType)
+                    {
+                        implementsService = true;
+                        break;
+                    }
+                }
             }
 
             if (!implementsService)
@@ -341,6 +353,18 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
                         implementsService = true;
                         break;
                     }
+
+                    var unboundBase = SymbolHelpers.ToUnboundGenericType(baseType);
+                    if (unboundBase != baseType)
+                    {
+                        var unboundBaseName = unboundBase.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                        if (unboundBaseName == serviceType)
+                        {
+                            implementsService = true;
+                            break;
+                        }
+                    }
+
                     baseType = baseType.BaseType;
                 }
             }
