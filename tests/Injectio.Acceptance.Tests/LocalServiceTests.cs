@@ -4,12 +4,10 @@ using Injectio.Acceptance.Tests.Services;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using Xunit.Abstractions;
-
 namespace Injectio.Acceptance.Tests;
 
 [Collection(DependencyInjectionCollection.CollectionName)]
-public class LocalServiceTests(ITestOutputHelper output, DependencyInjectionFixture fixture) : DependencyInjectionBase(output, fixture)
+public class LocalServiceTests(DependencyInjectionFixture fixture) : DependencyInjectionBase(fixture)
 {
     [Fact]
     public void ShouldResolveLocalService()

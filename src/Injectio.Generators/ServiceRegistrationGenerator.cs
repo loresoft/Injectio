@@ -14,11 +14,6 @@ namespace Injectio.Generators;
 [Generator]
 public class ServiceRegistrationGenerator : IIncrementalGenerator
 {
-    private static readonly SymbolDisplayFormat _fullyQualifiedNullableFormat =
-        SymbolDisplayFormat.FullyQualifiedFormat.AddMiscellaneousOptions(
-            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier
-        );
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // find all classes and methods with attributes
@@ -129,7 +124,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         // make sure attribute is for registration
         var attributes = methodSymbol.GetAttributes();
-        var isKnown = attributes.Any(IsMethodAttribute);
+        var isKnown = attributes.Any(SymbolHelpers.IsMethodAttribute);
         if (!isKnown)
             return null;
 
@@ -139,7 +134,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         var registration = new ModuleRegistration
         (
-            ClassName: methodSymbol.ContainingType.ToDisplayString(_fullyQualifiedNullableFormat),
+            ClassName: methodSymbol.ContainingType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat),
             MethodName: methodSymbol.Name,
             IsStatic: methodSymbol.IsStatic,
             HasTagCollection: hasTagCollection
@@ -184,7 +179,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (methodSymbol.Parameters.Length is 1 or 2)
         {
             var parameterSymbol = methodSymbol.Parameters[0];
-            hasServiceCollection = IsServiceCollection(parameterSymbol);
+            hasServiceCollection = SymbolHelpers.IsServiceCollection(parameterSymbol);
         }
 
         if (methodSymbol.Parameters.Length is 1)
@@ -194,9 +189,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (methodSymbol.Parameters.Length is 2)
         {
             var parameterSymbol = methodSymbol.Parameters[1];
-            hasTagCollection = IsStringCollection(parameterSymbol);
+            hasTagCollection = SymbolHelpers.IsStringCollection(parameterSymbol);
 
-            // to be valid, parameter 0 must be service collection and parameter 1 must be string collection, 
+            // to be valid, parameter 0 must be service collection and parameter 1 must be string collection,
             return (hasServiceCollection && hasTagCollection, hasTagCollection);
         }
 
@@ -207,7 +202,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
     {
         // check for known attribute
-        if (!IsKnownAttribute(attribute, out var serviceLifetime))
+        if (!SymbolHelpers.IsKnownAttribute(attribute, out var serviceLifetime))
             return null;
 
         // defaults
@@ -231,12 +226,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
                 if (typeParameter.Name == "TService" || index == 0)
                 {
-                    var service = typeArgument.ToDisplayString(_fullyQualifiedNullableFormat);
+                    var service = typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
                     serviceTypes.Add(service);
                 }
                 else if (typeParameter.Name == "TImplementation" || index == 1)
                 {
-                    implementationType = typeArgument.ToDisplayString(_fullyQualifiedNullableFormat);
+                    implementationType = typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
                 }
             }
         }
@@ -256,7 +251,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     var serviceTypeSymbol = value as INamedTypeSymbol;
                     isOpenGeneric = isOpenGeneric || IsOpenGeneric(serviceTypeSymbol);
 
-                    var serviceType = serviceTypeSymbol?.ToDisplayString(_fullyQualifiedNullableFormat) ?? value.ToString();
+                    var serviceType = serviceTypeSymbol?.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat) ?? value.ToString();
                     serviceTypes.Add(serviceType);
                     break;
                 case "ServiceKey":
@@ -266,7 +261,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     var implementationTypeSymbol = value as INamedTypeSymbol;
                     isOpenGeneric = isOpenGeneric || IsOpenGeneric(implementationTypeSymbol);
 
-                    implementationType = implementationTypeSymbol?.ToDisplayString(_fullyQualifiedNullableFormat) ?? value.ToString();
+                    implementationType = implementationTypeSymbol?.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat) ?? value.ToString();
                     break;
                 case "Factory":
                     implementationFactory = value.ToString();
@@ -275,7 +270,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     duplicateStrategy = ResolveDuplicateStrategy(value);
                     break;
                 case "Registration":
-                    registrationStrategy = ResolveRegistrationStrategy(value);
+                    registrationStrategy = SymbolHelpers.ResolveRegistrationStrategy(value);
                     break;
                 case "Tags":
                     var tagsItems = value
@@ -304,9 +299,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         // no implementation type set, use class attribute is on
         if (implementationType.IsNullOrWhiteSpace())
         {
-            var unboundType = ToUnboundGenericType(classSymbol);
+            var unboundType = SymbolHelpers.ToUnboundGenericType(classSymbol);
             isOpenGeneric = isOpenGeneric || IsOpenGeneric(unboundType);
-            implementationType = unboundType.ToDisplayString(_fullyQualifiedNullableFormat);
+            implementationType = unboundType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
         }
 
         // add implemented interfaces
@@ -321,10 +316,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 if (implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
                     continue;
 
-                var unboundInterface = ToUnboundGenericType(implementedInterface);
+                var unboundInterface = SymbolHelpers.ToUnboundGenericType(implementedInterface);
                 isOpenGeneric = isOpenGeneric || IsOpenGeneric(unboundInterface);
 
-                var interfaceName = unboundInterface.ToDisplayString(_fullyQualifiedNullableFormat);
+                var interfaceName = unboundInterface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
                 serviceTypes.Add(interfaceName);
             }
         }
@@ -354,136 +349,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             IsOpenGeneric: isOpenGeneric);
     }
 
-    private static INamedTypeSymbol ToUnboundGenericType(INamedTypeSymbol typeSymbol)
-    {
-        if (!typeSymbol.IsGenericType || typeSymbol.IsUnboundGenericType)
-            return typeSymbol;
-
-        foreach (var typeArgument in typeSymbol.TypeArguments)
-        {
-            // If TypeKind is TypeParameter, it's actually the name of a locally declared type-parameter -> placeholder
-            if (typeArgument.TypeKind != TypeKind.TypeParameter)
-                return typeSymbol;
-        }
-
-        return typeSymbol.ConstructUnboundGenericType();
-    }
-
-    private static bool IsKnownAttribute(AttributeData attribute, out string serviceLifetime)
-    {
-        if (IsSingletonAttribute(attribute))
-        {
-            serviceLifetime = KnownTypes.ServiceLifetimeSingletonFullName;
-            return true;
-        }
-
-        if (IsScopedAttribute(attribute))
-        {
-            serviceLifetime = KnownTypes.ServiceLifetimeScopedFullName;
-            return true;
-        }
-
-        if (IsTransientAttribute(attribute))
-        {
-            serviceLifetime = KnownTypes.ServiceLifetimeTransientFullName;
-            return true;
-        }
-
-        serviceLifetime = KnownTypes.ServiceLifetimeTransientFullName;
-        return false;
-    }
-
-    private static bool IsTransientAttribute(AttributeData attribute)
-    {
-        return attribute?.AttributeClass is
-        {
-            Name: KnownTypes.TransientAttributeShortName or KnownTypes.TransientAttributeTypeName,
-            ContainingNamespace:
-            {
-                Name: "Attributes",
-                ContainingNamespace.Name: "Injectio"
-            }
-        };
-    }
-
-    private static bool IsSingletonAttribute(AttributeData attribute)
-    {
-        return attribute?.AttributeClass is
-        {
-            Name: KnownTypes.SingletonAttributeShortName or KnownTypes.SingletonAttributeTypeName,
-            ContainingNamespace:
-            {
-                Name: "Attributes",
-                ContainingNamespace.Name: "Injectio"
-            }
-        };
-    }
-
-    private static bool IsScopedAttribute(AttributeData attribute)
-    {
-        return attribute?.AttributeClass is
-        {
-            Name: KnownTypes.ScopedAttributeShortName or KnownTypes.ScopedAttributeTypeName,
-            ContainingNamespace:
-            {
-                Name: "Attributes",
-                ContainingNamespace.Name: "Injectio"
-            }
-        };
-    }
-
-    private static bool IsMethodAttribute(AttributeData attribute)
-    {
-        return attribute?.AttributeClass is
-        {
-            Name: KnownTypes.ModuleAttributeShortName or KnownTypes.ModuleAttributeTypeName,
-            ContainingNamespace:
-            {
-                Name: "Attributes",
-                ContainingNamespace.Name: "Injectio"
-            }
-        };
-    }
-
-    private static bool IsServiceCollection(IParameterSymbol parameterSymbol)
-    {
-        return parameterSymbol?.Type is
-        {
-            Name: "IServiceCollection" or "ServiceCollection",
-            ContainingNamespace:
-            {
-                Name: "DependencyInjection",
-                ContainingNamespace:
-                {
-                    Name: "Extensions",
-                    ContainingNamespace.Name: "Microsoft"
-                }
-            }
-        };
-    }
-
-    private static bool IsStringCollection(IParameterSymbol parameterSymbol)
-    {
-        var type = parameterSymbol?.Type as INamedTypeSymbol;
-
-        return type is
-        {
-            Name: "IEnumerable" or "IReadOnlySet" or "IReadOnlyCollection" or "ICollection" or "ISet" or "HashSet",
-            IsGenericType: true,
-            TypeArguments.Length: 1,
-            TypeParameters.Length: 1,
-            ContainingNamespace:
-            {
-                Name: "Generic",
-                ContainingNamespace:
-                {
-                    Name: "Collections",
-                    ContainingNamespace.Name: "System"
-                }
-            }
-        };
-    }
-
     private static bool IsOpenGeneric(INamedTypeSymbol? typeSymbol)
     {
         if (typeSymbol is null)
@@ -508,23 +373,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             },
             string text => text,
             _ => KnownTypes.DuplicateStrategySkipShortName
-        };
-    }
-
-    private static string ResolveRegistrationStrategy(object? value)
-    {
-        return value switch
-        {
-            int v => v switch
-            {
-                KnownTypes.RegistrationStrategySelfValue => KnownTypes.RegistrationStrategySelfShortName,
-                KnownTypes.RegistrationStrategyImplementedInterfacesValue => KnownTypes.RegistrationStrategyImplementedInterfacesShortName,
-                KnownTypes.RegistrationStrategySelfWithInterfacesValue => KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-                KnownTypes.RegistrationStrategySelfWithProxyFactoryValue => KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName,
-                _ => KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
-            },
-            string text => text,
-            _ => KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
         };
     }
 }
