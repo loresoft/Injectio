@@ -44,11 +44,19 @@ jobs:
       - name: Run Test
         run: dotnet test --no-build --configuration Release --coverlet --coverlet-output-format lcov
 
-      - name: Report Coverage
+      - name: Collect Coverage
         if: success()
+        id: coverage
+        run: |
+          FILES=$(find ${{github.workspace}} -name 'coverage.*.info' -print | tr '\n' ' ')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+
+      - name: Report Coverage
+        if: success() && steps.coverage.outputs.files != ''
         uses: coverallsapp/github-action@v2
         continue-on-error: true
         with:
+          files: ${{ steps.coverage.outputs.files }}
           format: lcov
 
       - name: Create Packages
