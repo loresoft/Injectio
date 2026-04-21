@@ -4,12 +4,23 @@ using System.Diagnostics.CodeAnalysis;
 namespace Injectio.Generators;
 
 [ExcludeFromCodeCoverage]
-public readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArray<T>>, IEnumerable<T>
+public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnumerable<T>
     where T : IEquatable<T>
 {
-    public T[] Array { get; } = array ?? [];
+    public static readonly EquatableArray<T> Empty = new();
+
+
+    public EquatableArray() : this([]) { }
+
+    public EquatableArray(T[] array) => Array = array ?? [];
+
+    public EquatableArray(IEnumerable<T> items) => Array = items.ToArray() ?? [];
+
+
+    public T[] Array { get; }
 
     public int Count => Array.Length;
+
 
     public ReadOnlySpan<T> AsSpan() => Array.AsSpan();
 
@@ -44,4 +55,6 @@ public readonly struct EquatableArray<T>(T[] array) : IEquatable<EquatableArray<
 
 
     public static implicit operator EquatableArray<T>(T[] array) => new(array);
+
+    public static implicit operator EquatableArray<T>(List<T> items) => new(items);
 }

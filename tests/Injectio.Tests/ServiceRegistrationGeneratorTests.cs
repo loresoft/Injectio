@@ -23,17 +23,19 @@ public class ServiceRegistrationGeneratorTests
     [Fact]
     public Task GenerateRegisterSingletonSelfWithInterfaces()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces)]
-public class SingletonService : IService
-{ }
-";
+            public interface IService { }
+
+            [RegisterSingleton(Registration = RegistrationStrategy.SelfWithInterfaces)]
+            public class SingletonService : IService
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -46,17 +48,19 @@ public class SingletonService : IService
     [Fact]
     public Task GenerateRegisterScopedSelfWithInterfaces()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterScoped]
-public class SingletonService : IService
-{ }
-";
+            public interface IService { }
+
+            [RegisterScoped]
+            public class SingletonService : IService
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -69,17 +73,19 @@ public class SingletonService : IService
     [Fact]
     public Task GenerateRegisterScopedKeyedSelfWithInterfaces()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterScoped(ServiceKey = ""Alpha"")]
-public class SingletonService : IService
-{ }
-";
+            public interface IService { }
+
+            [RegisterScoped(ServiceKey = "Alpha")]
+            public class SingletonService : IService
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -92,17 +98,19 @@ public class SingletonService : IService
     [Fact]
     public Task GenerateRegisterTransientSelfWithInterfaces()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterTransient]
-public class SingletonService : IService
-{ }
-";
+            public interface IService { }
+
+            [RegisterTransient]
+            public class SingletonService : IService
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -115,25 +123,27 @@ public class SingletonService : IService
     [Fact]
     public Task GenerateRegisterMixedWithInterfaces()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService1
-{
-}
+            namespace Injectio.Sample;
 
-public interface IService2
-{
-}
+            public interface IService1
+            {
+            }
 
-[RegisterTransient(ServiceType = typeof(IService1))]
-[RegisterScoped(ServiceType = typeof(IService2), Duplicate = DuplicateStrategy.Append)]
-public class ServiceMultiple : IService1, IService2
-{
-}
-";
+            public interface IService2
+            {
+            }
+
+            [RegisterTransient(ServiceType = typeof(IService1))]
+            [RegisterScoped(ServiceType = typeof(IService2), Duplicate = DuplicateStrategy.Append)]
+            public class ServiceMultiple : IService1, IService2
+            {
+            }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -146,17 +156,19 @@ public class ServiceMultiple : IService1, IService2
     [Fact]
     public Task GenerateRegisterSingletonImplementedInterfaces()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterSingleton(Registration = RegistrationStrategy.ImplementedInterfaces)]
-public class SingletonService : IService
-{ }
-";
+            public interface IService { }
+
+            [RegisterSingleton(Registration = RegistrationStrategy.ImplementedInterfaces)]
+            public class SingletonService : IService
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -169,19 +181,21 @@ public class SingletonService : IService
     [Fact]
     public Task GenerateRegisterSingletonImplementedInterfacesMultiple()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService1 { }
+            namespace Injectio.Sample;
 
-public interface IService2 { }
+            public interface IService1 { }
 
-[RegisterSingleton(Registration = RegistrationStrategy.ImplementedInterfaces)]
-public class SingletonService : IService1, IService2
-{ }
-";
+            public interface IService2 { }
+
+            [RegisterSingleton(Registration = RegistrationStrategy.ImplementedInterfaces)]
+            public class SingletonService : IService1, IService2
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -194,30 +208,32 @@ public class SingletonService : IService1, IService2
     [Fact]
     public Task GenerateRegisterServicesInstance()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection.Extensions;
 
-public interface IModuleService
-{
-}
+            namespace Injectio.Sample;
 
-public class ModuleService : IModuleService
-{
-}
+            public interface IModuleService
+            {
+            }
 
-public class RegistrationModule
-{
-    [RegisterServices]
-    public void Register(IServiceCollection services)
-    {
-        services.TryAddTransient<IModuleService, ModuleService>();
-    }
-}
-";
+            public class ModuleService : IModuleService
+            {
+            }
+
+            public class RegistrationModule
+            {
+                [RegisterServices]
+                public void Register(IServiceCollection services)
+                {
+                    services.TryAddTransient<IModuleService, ModuleService>();
+                }
+            }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -230,30 +246,32 @@ public class RegistrationModule
     [Fact]
     public Task GenerateRegisterServicesStatic()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection.Extensions;
 
-public interface IModuleService
-{
-}
+            namespace Injectio.Sample;
 
-public class ModuleService : IModuleService
-{
-}
+            public interface IModuleService
+            {
+            }
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(IServiceCollection services)
-    {
-        services.TryAddTransient<IModuleService, ModuleService>();
-    }
-}
-";
+            public class ModuleService : IModuleService
+            {
+            }
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services)
+                {
+                    services.TryAddTransient<IModuleService, ModuleService>();
+                }
+            }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -266,30 +284,32 @@ public static class RegistrationModule
     [Fact]
     public Task GenerateRegisterServicesInvalidMethod()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection.Extensions;
 
-public interface IModuleService
-{
-}
+            namespace Injectio.Sample;
 
-public class ModuleService : IModuleService
-{
-}
+            public interface IModuleService
+            {
+            }
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(IServiceCollection services, string test)
-    {
-        services.TryAddTransient<IModuleService, ModuleService>();
-    }
-}
-";
+            public class ModuleService : IModuleService
+            {
+            }
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services, string test)
+                {
+                    services.TryAddTransient<IModuleService, ModuleService>();
+                }
+            }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -302,30 +322,32 @@ public static class RegistrationModule
     [Fact]
     public Task GenerateRegisterServicesInvalidService()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection.Extensions;
 
-public interface IModuleService
-{
-}
+            namespace Injectio.Sample;
 
-public class ModuleService : IModuleService
-{
-}
+            public interface IModuleService
+            {
+            }
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(string test)
-    {
-        services.TryAddTransient<IModuleService, ModuleService>();
-    }
-}
-";
+            public class ModuleService : IModuleService
+            {
+            }
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(string test)
+                {
+                    services.TryAddTransient<IModuleService, ModuleService>();
+                }
+            }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -338,34 +360,36 @@ public static class RegistrationModule
     [Fact]
     public Task GenerateRegisterSingletonFactory()
     {
-        var source = @"
-using System;
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using System;
+            using Injectio.Attributes;
 
-public interface IService
-{ }
+            namespace Injectio.Sample;
 
-public interface IFactoryService
-{ }
+            public interface IService
+            { }
 
-[RegisterTransient(ServiceType = typeof(IFactoryService), Factory = nameof(ServiceFactory))]
-public class FactoryService : IFactoryService
-{
-    private readonly IService _service;
+            public interface IFactoryService
+            { }
 
-    public FactoryService1(IService service1)
-    {
-        _service1 = service1;
-    }
+            [RegisterTransient(ServiceType = typeof(IFactoryService), Factory = nameof(ServiceFactory))]
+            public class FactoryService : IFactoryService
+            {
+                private readonly IService _service;
 
-    public static IFactoryService1 ServiceFactory(IServiceProvider serviceProvider)
-    {
-        return new FactoryService1(serviceProvider.GetRequiredService<IService>());
-    }
-}
-";
+                public FactoryService1(IService service1)
+                {
+                    _service1 = service1;
+                }
+
+                public static IFactoryService1 ServiceFactory(IServiceProvider serviceProvider)
+                {
+                    return new FactoryService1(serviceProvider.GetRequiredService<IService>());
+                }
+            }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -378,18 +402,20 @@ public class FactoryService : IFactoryService
     [Fact]
     public Task GenerateRegisterSingletonOpenGeneric()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IOpenGeneric<T>
-{ }
+            namespace Injectio.Sample;
 
-[RegisterSingleton(ImplementationType = typeof(OpenGeneric<>), ServiceType = typeof(IOpenGeneric<>))]
-public class OpenGeneric<T> : IOpenGeneric<T>
-{ }
-";
+            public interface IOpenGeneric<T>
+            { }
+
+            [RegisterSingleton(ImplementationType = typeof(OpenGeneric<>), ServiceType = typeof(IOpenGeneric<>))]
+            public class OpenGeneric<T> : IOpenGeneric<T>
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -402,18 +428,20 @@ public class OpenGeneric<T> : IOpenGeneric<T>
     [Fact]
     public Task GenerateRegisterSingletonSelfAsOpenGeneric()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IOpenGeneric<T>
-{ }
+            namespace Injectio.Sample;
 
-[RegisterSingleton]
-public class OpenGeneric<T> : IOpenGeneric<T>
-{ }
-";
+            public interface IOpenGeneric<T>
+            { }
+
+            [RegisterSingleton]
+            public class OpenGeneric<T> : IOpenGeneric<T>
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -426,18 +454,20 @@ public class OpenGeneric<T> : IOpenGeneric<T>
     [Fact]
     public Task GenerateRegisterSingletonSelfAsClosedGeneric()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IClosedGeneric<T>
-{ }
+            namespace Injectio.Sample;
 
-[RegisterSingleton]
-public class Service : IClosedGeneric<object>
-{ }
-";
+            public interface IClosedGeneric<T>
+            { }
+
+            [RegisterSingleton]
+            public class Service : IClosedGeneric<object>
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -450,18 +480,20 @@ public class Service : IClosedGeneric<object>
     [Fact]
     public Task GenerateRegisterSingletonTags()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IServiceTag
-{ }
+            namespace Injectio.Sample;
 
-[RegisterSingleton(Tags = ""Client,FrontEnd"")]
-public class ServiceTag : IServiceTag
-{ }
-";
+            public interface IServiceTag
+            { }
+
+            [RegisterSingleton(Tags = "Client,FrontEnd")]
+            public class ServiceTag : IServiceTag
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -475,17 +507,19 @@ public class ServiceTag : IServiceTag
     [Fact]
     public Task GenerateRegisterSingletonGeneric()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterSingleton<IService, SingletonService>(Duplicate = DuplicateStrategy.Replace)]
-public class SingletonService : IService
-{ }
-";
+            public interface IService { }
+
+            [RegisterSingleton<IService, SingletonService>(Duplicate = DuplicateStrategy.Replace)]
+            public class SingletonService : IService
+            { }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
@@ -499,55 +533,57 @@ public class SingletonService : IService
     [Fact]
     public Task GenerateRegisterSingletonServiceKeys()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection.Extensions;
 
-[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Alpha"")]
-public class ServiceAlphaKeyed : IServiceKeyed
-{ }
+            namespace Injectio.Sample;
 
-[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Beta"")]
-public class ServiceBetaKeyed : IServiceKeyed
-{ }
+            [RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = "Alpha")]
+            public class ServiceAlphaKeyed : IServiceKeyed
+            { }
 
-[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ServiceType.Alpha)]
-public class ServiceAlphaTypeKeyed : IServiceKeyed
-{ }
+            [RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = "Beta")]
+            public class ServiceBetaKeyed : IServiceKeyed
+            { }
 
-[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ServiceType.Beta)]
-public class ServiceBetaTypeKeyed : IServiceKeyed
-{ }
+            [RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ServiceType.Alpha)]
+            public class ServiceAlphaTypeKeyed : IServiceKeyed
+            { }
 
-[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Charlie"", Factory = nameof(ServiceFactory))]
-[RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ""Delta"", Factory = nameof(ServiceFactory))]
-public class ServiceFactoryKeyed : IServiceKeyed
-{
-    public ServiceFactoryKeyed(object? serviceKey)
-    {
-        ServiceKey = serviceKey;
-    }
+            [RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = ServiceType.Beta)]
+            public class ServiceBetaTypeKeyed : IServiceKeyed
+            { }
 
-    public object? ServiceKey { get; }
+            [RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = "Charlie", Factory = nameof(ServiceFactory))]
+            [RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = "Delta", Factory = nameof(ServiceFactory))]
+            public class ServiceFactoryKeyed : IServiceKeyed
+            {
+                public ServiceFactoryKeyed(object? serviceKey)
+                {
+                    ServiceKey = serviceKey;
+                }
 
-    public static IServiceKeyed ServiceFactory(IServiceProvider serviceProvider, object? serviceKey)
-    {
-        return new ServiceFactoryKeyed(serviceKey);
-    }
+                public object? ServiceKey { get; }
 
-}
+                public static IServiceKeyed ServiceFactory(IServiceProvider serviceProvider, object? serviceKey)
+                {
+                    return new ServiceFactoryKeyed(serviceKey);
+                }
 
-public enum ServiceType
-{
-    Alpha,
-    Beta,
-    Charlie,
-    Delta
-}
-";
+            }
+
+            public enum ServiceType
+            {
+                Alpha,
+                Beta,
+                Charlie,
+                Delta
+            }
+
+            """;
 
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 

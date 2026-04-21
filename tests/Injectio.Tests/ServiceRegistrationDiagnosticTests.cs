@@ -22,251 +22,265 @@ public class ServiceRegistrationDiagnosticTests
     [Fact]
     public async Task DiagnoseRegisterServicesInvalidFirstParameter()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
+            using Injectio.Attributes;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(string test)
-    {
-    }
-}
-";
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(string test)
+                {
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0001");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0001");
     }
 
     [Fact]
     public async Task DiagnoseRegisterServicesInvalidSecondParameter()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
+        const string source = """
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(IServiceCollection services, string test)
-    {
-    }
-}
-";
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services, string test)
+                {
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0002");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0002");
     }
 
     [Fact]
     public async Task DiagnoseRegisterServicesTooManyParameters()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
+        const string source = """
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(IServiceCollection services, string a, string b)
-    {
-    }
-}
-";
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services, string a, string b)
+                {
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0003");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0003");
     }
 
     [Fact]
     public async Task DiagnoseRegisterServicesNoParameters()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
+            using Injectio.Attributes;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register()
-    {
-    }
-}
-";
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register()
+                {
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0001");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0001");
     }
 
     [Fact]
     public async Task DiagnoseFactoryMethodNotFound()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
+            using Injectio.Attributes;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public interface IService { }
+            public interface IService { }
 
-[RegisterTransient(ServiceType = typeof(IService), Factory = ""NonExistentMethod"")]
-public class MyService : IService
-{
-}
-";
+            [RegisterTransient(ServiceType = typeof(IService), Factory = "NonExistentMethod")]
+            public class MyService : IService
+            {
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0004");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0004");
     }
 
     [Fact]
     public async Task DiagnoseFactoryMethodNotStatic()
     {
-        var source = @"
-using System;
-using Injectio.Attributes;
+        const string source = """
+            using System;
+            using Injectio.Attributes;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public interface IService { }
+            public interface IService { }
 
-[RegisterTransient(ServiceType = typeof(IService), Factory = nameof(ServiceFactory))]
-public class MyService : IService
-{
-    public IService ServiceFactory(IServiceProvider serviceProvider)
-    {
-        return new MyService();
-    }
-}
-";
+            [RegisterTransient(ServiceType = typeof(IService), Factory = nameof(ServiceFactory))]
+            public class MyService : IService
+            {
+                public IService ServiceFactory(IServiceProvider serviceProvider)
+                {
+                    return new MyService();
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0005");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0005");
     }
 
     [Fact]
     public async Task DiagnoseFactoryMethodInvalidSignature()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
+            using Injectio.Attributes;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public interface IService { }
+            public interface IService { }
 
-[RegisterTransient(ServiceType = typeof(IService), Factory = nameof(ServiceFactory))]
-public class MyService : IService
-{
-    public static IService ServiceFactory(string notServiceProvider)
-    {
-        return new MyService();
-    }
-}
-";
+            [RegisterTransient(ServiceType = typeof(IService), Factory = nameof(ServiceFactory))]
+            public class MyService : IService
+            {
+                public static IService ServiceFactory(string notServiceProvider)
+                {
+                    return new MyService();
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0006");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0006");
     }
 
     [Fact]
     public async Task DiagnoseServiceTypeMismatch()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
+            using Injectio.Attributes;
 
-namespace Injectio.Sample;
+            namespace Injectio.Sample;
 
-public interface IService { }
-public interface IOtherService { }
+            public interface IService { }
+            public interface IOtherService { }
 
-[RegisterTransient(ServiceType = typeof(IOtherService))]
-public class MyService : IService
-{
-}
-";
+            [RegisterTransient(ServiceType = typeof(IOtherService))]
+            public class MyService : IService
+            {
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0007");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0007");
     }
 
     [Fact]
     public async Task DiagnoseRegisterServicesOnAbstractClassNonStaticMethod()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
 
-public abstract class RegistrationModule
-{
-    [RegisterServices]
-    public void Register(IServiceCollection services)
-    {
-    }
-}
-";
+            namespace Injectio.Sample;
+
+            public abstract class RegistrationModule
+            {
+                [RegisterServices]
+                public void Register(IServiceCollection services)
+                {
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0009");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0009");
     }
 
     [Fact]
     public async Task DiagnoseAbstractImplementationTypeWithoutFactory()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterSingleton]
-public abstract class AbstractService : IService
-{
-}
-";
+            public interface IService { }
+
+            [RegisterSingleton]
+            public abstract class AbstractService : IService
+            {
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "INJECT0008");
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0008");
     }
 
     [Fact]
     public async Task NoDiagnosticsForAbstractImplementationTypeWithFactory()
     {
-        var source = @"
-using System;
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using System;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterSingleton(ServiceType = typeof(IService), Factory = nameof(Create))]
-public abstract class AbstractService : IService
-{
-    public static IService Create(IServiceProvider serviceProvider)
-    {
-        return null!;
-    }
-}
-";
+            public interface IService { }
+
+            [RegisterSingleton(ServiceType = typeof(IService), Factory = nameof(Create))]
+            public abstract class AbstractService : IService
+            {
+                public static IService Create(IServiceProvider serviceProvider)
+                {
+                    return null!;
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
@@ -276,18 +290,20 @@ public abstract class AbstractService : IService
     [Fact]
     public async Task NoDiagnosticsForValidRegistration()
     {
-        var source = @"
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterSingleton]
-public class MyService : IService
-{
-}
-";
+            public interface IService { }
+
+            [RegisterSingleton]
+            public class MyService : IService
+            {
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
@@ -297,23 +313,25 @@ public class MyService : IService
     [Fact]
     public async Task NoDiagnosticsForValidFactory()
     {
-        var source = @"
-using System;
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using System;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterTransient(ServiceType = typeof(IService), Factory = nameof(ServiceFactory))]
-public class MyService : IService
-{
-    public static IService ServiceFactory(IServiceProvider serviceProvider)
-    {
-        return new MyService();
-    }
-}
-";
+            public interface IService { }
+
+            [RegisterTransient(ServiceType = typeof(IService), Factory = nameof(ServiceFactory))]
+            public class MyService : IService
+            {
+                public static IService ServiceFactory(IServiceProvider serviceProvider)
+                {
+                    return new MyService();
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
@@ -323,23 +341,25 @@ public class MyService : IService
     [Fact]
     public async Task NoDiagnosticsForValidKeyedFactory()
     {
-        var source = @"
-using System;
-using Injectio.Attributes;
+        const string source = """
 
-namespace Injectio.Sample;
+            using System;
+            using Injectio.Attributes;
 
-public interface IService { }
+            namespace Injectio.Sample;
 
-[RegisterTransient(ServiceType = typeof(IService), ServiceKey = ""key"", Factory = nameof(ServiceFactory))]
-public class MyService : IService
-{
-    public static IService ServiceFactory(IServiceProvider serviceProvider, object? serviceKey)
-    {
-        return new MyService();
-    }
-}
-";
+            public interface IService { }
+
+            [RegisterTransient(ServiceType = typeof(IService), ServiceKey = "key", Factory = nameof(ServiceFactory))]
+            public class MyService : IService
+            {
+                public static IService ServiceFactory(IServiceProvider serviceProvider, object? serviceKey)
+                {
+                    return new MyService();
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
@@ -349,20 +369,22 @@ public class MyService : IService
     [Fact]
     public async Task NoDiagnosticsForValidRegisterServicesMethod()
     {
-        var source = @"
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
+        const string source = """
 
-namespace Injectio.Sample;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(IServiceCollection services)
-    {
-    }
-}
-";
+            namespace Injectio.Sample;
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services)
+                {
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
@@ -372,21 +394,23 @@ public static class RegistrationModule
     [Fact]
     public async Task NoDiagnosticsForValidRegisterServicesWithTags()
     {
-        var source = @"
-using System.Collections.Generic;
-using Injectio.Attributes;
-using Microsoft.Extensions.DependencyInjection;
+        const string source = """
 
-namespace Injectio.Sample;
+            using System.Collections.Generic;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
 
-public static class RegistrationModule
-{
-    [RegisterServices]
-    public static void Register(IServiceCollection services, IEnumerable<string> tags)
-    {
-    }
-}
-";
+            namespace Injectio.Sample;
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services, IEnumerable<string> tags)
+                {
+                }
+            }
+
+            """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
@@ -418,7 +442,7 @@ public static class RegistrationModule
 
         // return only Injectio diagnostics
         return diagnostics
-            .Where(d => d.Id.StartsWith("INJECT"))
+            .Where(d => d.Id.StartsWith("INJ"))
             .ToImmutableArray();
     }
 }

@@ -264,11 +264,14 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
         if (factoryMethods.Count == 0)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostic diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.FactoryMethodNotFound,
                 location,
                 factoryMethodName,
-                className));
+                className);
+
+            context.ReportDiagnostic(diagnostic);
+
             return;
         }
 
@@ -297,13 +300,13 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        context.ReportDiagnostic(Diagnostic.Create(
-            hasStaticOverload
-                ? DiagnosticDescriptors.FactoryMethodInvalidSignature
-                : DiagnosticDescriptors.FactoryMethodNotStatic,
+        Diagnostic invalidSignature = Diagnostic.Create(
+            hasStaticOverload ? DiagnosticDescriptors.FactoryMethodInvalidSignature : DiagnosticDescriptors.FactoryMethodNotStatic,
             location,
             factoryMethodName,
-            className));
+            className);
+
+        context.ReportDiagnostic(invalidSignature);
     }
 
     private static void ValidateServiceTypes(
@@ -372,11 +375,13 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
             if (!implementsService)
             {
-                context.ReportDiagnostic(Diagnostic.Create(
+                Diagnostic diagnostic = Diagnostic.Create(
                     DiagnosticDescriptors.ServiceTypeMismatch,
                     location,
                     implTypeName,
-                    serviceType));
+                    serviceType);
+
+                context.ReportDiagnostic(diagnostic);
             }
         }
     }
