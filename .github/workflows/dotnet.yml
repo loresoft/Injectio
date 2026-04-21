@@ -49,7 +49,6 @@ jobs:
         uses: coverallsapp/github-action@v2
         continue-on-error: true
         with:
-          file: "${{github.workspace}}/tests/Injectio.Tests/bin/*/*/TestResults/coverage.info"
           format: lcov
 
       - name: Create Packages
