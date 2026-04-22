@@ -14,3 +14,10 @@ INJ0006 | Usage    | Warning  | Factory method has invalid signature
 INJ0007 | Usage    | Warning  | Implementation does not implement service type
 INJ0008 | Usage    | Warning  | Implementation type is abstract
 INJ0009 | Usage    | Warning  | RegisterServices on non-static method in abstract class
+INJ0010 | Usage    | Warning  | Decorator does not implement service type
+INJ0011 | Usage    | Warning  | Decorator is missing service type
+INJ0012 | Usage    | Warning  | Decorator has no constructor accepting the inner service
+INJ0013 | Usage    | Warning  | Decorator factory method not found
+INJ0014 | Usage    | Warning  | Decorator factory method has invalid signature
+INJ0015 | Usage    | Warning  | Keyed decoration is not supported for open-generic services
+INJ0016 | Usage    | Warning  | Decorator target service is not registered in this compilation
