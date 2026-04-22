@@ -61,6 +61,19 @@ internal static class SymbolHelpers
         };
     }
 
+    public static bool IsDecoratorAttribute(AttributeData attribute)
+    {
+        return attribute?.AttributeClass is
+        {
+            Name: KnownTypes.DecoratorAttributeShortName or KnownTypes.DecoratorAttributeTypeName,
+            ContainingNamespace:
+            {
+                Name: "Attributes",
+                ContainingNamespace.Name: "Injectio"
+            }
+        };
+    }
+
     public static bool IsKnownAttribute(AttributeData attribute, out string serviceLifetime)
     {
         if (IsSingletonAttribute(attribute))

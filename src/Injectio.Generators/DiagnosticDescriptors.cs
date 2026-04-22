@@ -86,4 +86,69 @@ public static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor DecoratorDoesNotImplementService = new(
+        id: "INJ0010",
+        title: "Decorator does not implement service type",
+        messageFormat: "Decorator '{0}' does not implement or inherit from service type '{1}'",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor DecoratorMissingServiceType = new(
+        id: "INJ0011",
+        title: "Decorator is missing service type",
+        messageFormat: "Decorator '{0}' must specify a ServiceType either via the generic attribute or the ServiceType property",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor DecoratorMissingInnerConstructor = new(
+        id: "INJ0012",
+        title: "Decorator has no constructor accepting the inner service",
+        messageFormat: "Decorator '{0}' must expose a public constructor whose first parameter is of type '{1}' (or use Factory)",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor DecoratorFactoryNotFound = new(
+        id: "INJ0013",
+        title: "Decorator factory method not found",
+        messageFormat: "Decorator factory method '{0}' was not found on type '{1}'",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor DecoratorFactoryInvalidSignature = new(
+        id: "INJ0014",
+        title: "Decorator factory method has invalid signature",
+        messageFormat: "Decorator factory method '{0}' on type '{1}' must be static and accept (IServiceProvider, TService) for non-keyed or (IServiceProvider, object?, TService) for keyed decorators",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor DecoratorOpenGenericKeyed = new(
+        id: "INJ0015",
+        title: "Keyed decoration is not supported for open-generic services",
+        messageFormat: "Decorator '{0}' targets open-generic service '{1}' and cannot be used with ServiceKey or AnyKey",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        customTags: [WellKnownDiagnosticTags.CompilationEnd]
+    );
+
+    public static readonly DiagnosticDescriptor DecoratorTargetNotRegistered = new(
+        id: "INJ0016",
+        title: "Decorator target service is not registered in this compilation",
+        messageFormat: "Decorator '{0}' targets service '{1}' but no matching registration was found; decoration will be skipped at runtime if the service is not registered elsewhere",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        customTags: [WellKnownDiagnosticTags.CompilationEnd]
+    );
 }

@@ -24,7 +24,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             )
             .Where(static context =>
                 context is not null
-                && (context.ServiceRegistrations?.Count > 0 || context.ModuleRegistrations?.Count > 0)
+                && (context.ServiceRegistrations?.Count > 0
+                    || context.ModuleRegistrations?.Count > 0
+                    || context.DecoratorRegistrations?.Count > 0)
             )
             .Collect()
             .WithTrackingName("Registrations");
@@ -64,6 +66,14 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Where(m => m is not null)
             .ToArray();
 
+        var decoratorRegistrations = source.Registrations
+            .SelectMany(m => m?.DecoratorRegistrations ?? Array.Empty<DecoratorRegistration>())
+            .Where(m => m is not null)
+            .OrderBy(m => m.ServiceType, StringComparer.Ordinal)
+            .ThenBy(m => m.Order)
+            .ThenBy(m => m.DecoratorType, StringComparer.Ordinal)
+            .ToArray();
+
         // compute extension method name
         var methodName = source.Options.MethodOptions?.Name;
         if (methodName.IsNullOrWhiteSpace())
@@ -75,12 +85,20 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         var result = ServiceRegistrationWriter.GenerateExtensionClass(
             moduleRegistrations,
             serviceRegistrations,
+            decoratorRegistrations,
             source.Options.AssemblyName,
             methodName,
             methodInternal);
 
         // add source file
         sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
+
+        // emit decoration helper if any decorators discovered
+        if (decoratorRegistrations.Length > 0)
+        {
+            var decorationHelper = ServiceRegistrationWriter.GenerateDecorationHelper();
+            sourceContext.AddSource("Injectio.Decoration.g.cs", SourceText.From(decorationHelper, Encoding.UTF8));
+        }
     }
 
     private static bool SyntacticPredicate(SyntaxNode syntaxNode, CancellationToken cancellationToken)
@@ -156,18 +174,148 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         // support multiple register attributes on a class
         var registrations = new List<ServiceRegistration>();
+        var decorators = new List<DecoratorRegistration>();
 
         foreach (var attribute in attributes)
         {
+            if (SymbolHelpers.IsDecoratorAttribute(attribute))
+            {
+                var decorator = CreateDecoratorRegistration(classSymbol, attribute);
+                if (decorator is not null)
+                    decorators.Add(decorator);
+                continue;
+            }
+
             var registration = CreateServiceRegistration(classSymbol, attribute);
             if (registration is not null)
                 registrations.Add(registration);
         }
 
-        if (registrations.Count == 0)
+        if (registrations.Count == 0 && decorators.Count == 0)
             return null;
 
-        return new ServiceRegistrationContext(ServiceRegistrations: registrations.ToArray());
+        EquatableArray<ServiceRegistration>? serviceArray = registrations.Count > 0
+            ? new EquatableArray<ServiceRegistration>(registrations.ToArray())
+            : (EquatableArray<ServiceRegistration>?)null;
+        EquatableArray<DecoratorRegistration>? decoratorArray = decorators.Count > 0
+            ? new EquatableArray<DecoratorRegistration>(decorators.ToArray())
+            : (EquatableArray<DecoratorRegistration>?)null;
+
+        return new ServiceRegistrationContext(
+            ServiceRegistrations: serviceArray,
+            DecoratorRegistrations: decoratorArray);
+    }
+
+    private static DecoratorRegistration? CreateDecoratorRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
+    {
+        string? serviceType = null;
+        string? implementationType = null;
+        string? serviceKey = null;
+        bool isAnyKey = false;
+        string? factory = null;
+        int order = 0;
+        var tags = new HashSet<string>();
+        bool isOpenGeneric = false;
+
+        var attributeClass = attribute.AttributeClass;
+        if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
+        {
+            for (var index = 0; index < attributeClass.TypeParameters.Length; index++)
+            {
+                var typeParameter = attributeClass.TypeParameters[index];
+                var typeArgument = attributeClass.TypeArguments[index];
+
+                if (typeParameter.Name == "TService" || index == 0)
+                {
+                    isOpenGeneric = isOpenGeneric || IsOpenGeneric(typeArgument as INamedTypeSymbol);
+                    serviceType = typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                }
+                else if (typeParameter.Name == "TImplementation" || index == 1)
+                {
+                    isOpenGeneric = isOpenGeneric || IsOpenGeneric(typeArgument as INamedTypeSymbol);
+                    implementationType = typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                }
+            }
+        }
+
+        foreach (var parameter in attribute.NamedArguments)
+        {
+            var name = parameter.Key;
+            var value = parameter.Value.Value;
+
+            if (string.IsNullOrEmpty(name))
+                continue;
+
+            switch (name)
+            {
+                case "ServiceType":
+                    if (value is INamedTypeSymbol serviceTypeSymbol)
+                    {
+                        isOpenGeneric = isOpenGeneric || IsOpenGeneric(serviceTypeSymbol);
+                        serviceType = serviceTypeSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    }
+                    else if (value != null)
+                    {
+                        serviceType = value.ToString();
+                    }
+                    break;
+                case "ImplementationType":
+                    if (value is INamedTypeSymbol implSymbol)
+                    {
+                        isOpenGeneric = isOpenGeneric || IsOpenGeneric(implSymbol);
+                        implementationType = implSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    }
+                    else if (value != null)
+                    {
+                        implementationType = value.ToString();
+                    }
+                    break;
+                case "ServiceKey":
+                    serviceKey = parameter.Value.ToCSharpString();
+                    break;
+                case "AnyKey":
+                    if (value is bool anyKey)
+                        isAnyKey = anyKey;
+                    break;
+                case "Factory":
+                    factory = value?.ToString();
+                    break;
+                case "Order":
+                    if (value is int orderValue)
+                        order = orderValue;
+                    break;
+                case "Tags":
+                    if (value is string tagsText)
+                    {
+                        foreach (var tag in tagsText.Split(',', ';'))
+                        {
+                            if (tag.HasValue())
+                                tags.Add(tag.Trim());
+                        }
+                    }
+                    break;
+            }
+        }
+
+        if (implementationType.IsNullOrWhiteSpace())
+        {
+            var unboundType = SymbolHelpers.ToUnboundGenericType(classSymbol);
+            isOpenGeneric = isOpenGeneric || IsOpenGeneric(unboundType);
+            implementationType = unboundType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+        }
+
+        if (serviceType.IsNullOrWhiteSpace())
+            return null;
+
+        return new DecoratorRegistration(
+            DecoratorType: implementationType!,
+            ServiceType: serviceType!,
+            ServiceKey: serviceKey,
+            IsAnyKey: isAnyKey,
+            Factory: factory,
+            Order: order,
+            Tags: tags.ToArray(),
+            IsOpenGeneric: isOpenGeneric);
     }
 
     private static (bool isValid, bool hasTagCollection) ValidateMethod(IMethodSymbol methodSymbol)

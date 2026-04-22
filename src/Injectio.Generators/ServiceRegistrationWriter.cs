@@ -11,6 +11,15 @@ public static class ServiceRegistrationWriter
         string? assemblyName,
         string? methodName,
         string? methodInternal)
+        => GenerateExtensionClass(moduleRegistrations, serviceRegistrations, Array.Empty<DecoratorRegistration>(), assemblyName, methodName, methodInternal);
+
+    public static string GenerateExtensionClass(
+        IReadOnlyList<ModuleRegistration> moduleRegistrations,
+        IReadOnlyList<ServiceRegistration> serviceRegistrations,
+        IReadOnlyList<DecoratorRegistration> decoratorRegistrations,
+        string? assemblyName,
+        string? methodName,
+        string? methodInternal)
     {
         var codeBuilder = new IndentedStringBuilder();
         codeBuilder
@@ -64,6 +73,11 @@ public static class ServiceRegistrationWriter
         foreach (var serviceRegistration in serviceRegistrations)
         {
             WriteRegistration(codeBuilder, serviceRegistration);
+        }
+
+        foreach (var decoratorRegistration in decoratorRegistrations)
+        {
+            WriteDecorator(codeBuilder, decoratorRegistration);
         }
 
         codeBuilder
@@ -319,6 +333,366 @@ public static class ServiceRegistrationWriter
             .AppendLine(");")
             .AppendLine();
     }
+
+    private static void WriteDecorator(
+        IndentedStringBuilder codeBuilder,
+        DecoratorRegistration decorator)
+    {
+        if (decorator.Tags.Count > 0)
+        {
+            codeBuilder
+                .Append("if (tagSet.Count == 0 || tagSet.Intersect(new[] { ");
+
+            bool wroteTag = false;
+            foreach (var tag in decorator.Tags)
+            {
+                if (wroteTag)
+                    codeBuilder.Append(", ");
+
+                codeBuilder
+                    .Append("\"")
+                    .Append(tag)
+                    .Append("\"");
+
+                wroteTag = true;
+            }
+
+            codeBuilder
+                .AppendLine(" }).Any())")
+                .AppendLine("{")
+                .IncrementIndent();
+        }
+
+        var serviceType = decorator.ServiceType;
+        var decoratorType = decorator.DecoratorType;
+        bool hasServiceKey = decorator.ServiceKey.HasValue();
+        bool isKeyed = hasServiceKey || decorator.IsAnyKey;
+
+        // resolve the service key expression passed to the helper
+        string keyExpression;
+        if (decorator.IsAnyKey)
+            keyExpression = "global::Microsoft.Extensions.DependencyInjection.KeyedService.AnyKey";
+        else if (hasServiceKey)
+            keyExpression = decorator.ServiceKey!;
+        else
+            keyExpression = "null";
+
+        if (decorator.IsOpenGeneric)
+        {
+            codeBuilder
+                .Append("global::Injectio.Internal.InjectioDecorationExtensions.DecorateOpenGeneric(")
+                .AppendLine()
+                .IncrementIndent()
+                .AppendLine("serviceCollection,")
+                .Append("typeof(")
+                .AppendIf("global::", !serviceType.StartsWith("global::"))
+                .Append(serviceType)
+                .AppendLine("),")
+                .Append("typeof(")
+                .AppendIf("global::", !decoratorType.StartsWith("global::"))
+                .Append(decoratorType)
+                .AppendLine(")")
+                .DecrementIndent()
+                .AppendLine(");")
+                .AppendLine();
+        }
+        else if (isKeyed)
+        {
+            codeBuilder
+                .Append("global::Injectio.Internal.InjectioDecorationExtensions.DecorateKeyed<")
+                .AppendIf("global::", !serviceType.StartsWith("global::"))
+                .Append(serviceType)
+                .AppendLine(">(")
+                .IncrementIndent()
+                .AppendLine("serviceCollection,")
+                .Append(keyExpression)
+                .AppendLine(",");
+
+            WriteDecoratorFactory(codeBuilder, decorator, isKeyed: true);
+
+            codeBuilder
+                .AppendLine()
+                .DecrementIndent()
+                .AppendLine(");")
+                .AppendLine();
+        }
+        else
+        {
+            codeBuilder
+                .Append("global::Injectio.Internal.InjectioDecorationExtensions.Decorate<")
+                .AppendIf("global::", !serviceType.StartsWith("global::"))
+                .Append(serviceType)
+                .AppendLine(">(")
+                .IncrementIndent()
+                .AppendLine("serviceCollection,");
+
+            WriteDecoratorFactory(codeBuilder, decorator, isKeyed: false);
+
+            codeBuilder
+                .AppendLine()
+                .DecrementIndent()
+                .AppendLine(");")
+                .AppendLine();
+        }
+
+        if (decorator.Tags.Count > 0)
+        {
+            codeBuilder
+                .DecrementIndent()
+                .AppendLine("}")
+                .AppendLine();
+        }
+    }
+
+    private static void WriteDecoratorFactory(
+        IndentedStringBuilder codeBuilder,
+        DecoratorRegistration decorator,
+        bool isKeyed)
+    {
+        var serviceType = decorator.ServiceType;
+        var decoratorType = decorator.DecoratorType;
+        var qualifiedService = serviceType.StartsWith("global::") ? serviceType : "global::" + serviceType;
+        var qualifiedDecorator = decoratorType.StartsWith("global::") ? decoratorType : "global::" + decoratorType;
+
+        if (decorator.Factory.HasValue())
+        {
+            bool hasNamespace = decorator.Factory!.Contains(".");
+            var factoryTarget = hasNamespace ? decorator.Factory! : qualifiedDecorator + "." + decorator.Factory;
+
+            if (isKeyed)
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, serviceKey, inner) => ")
+                    .Append(factoryTarget)
+                    .Append("(serviceProvider, serviceKey, inner)");
+            }
+            else
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, inner) => ")
+                    .Append(factoryTarget)
+                    .Append("(serviceProvider, inner)");
+            }
+        }
+        else
+        {
+            if (isKeyed)
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, serviceKey, inner) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<")
+                    .Append(qualifiedDecorator)
+                    .Append(">(serviceProvider, inner)");
+            }
+            else
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, inner) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<")
+                    .Append(qualifiedDecorator)
+                    .Append(">(serviceProvider, inner)");
+            }
+        }
+    }
+
+    public static string GenerateDecorationHelper()
+    {
+        var codeBuilder = new IndentedStringBuilder();
+        codeBuilder
+            .AppendLine("// <auto-generated />")
+            .AppendLine("#nullable enable")
+            .AppendLine()
+            .AppendLine("namespace Injectio.Internal")
+            .AppendLine("{")
+            .IncrementIndent()
+            .Append("[global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"")
+            .Append(ThisAssembly.Product)
+            .Append("\", \"")
+            .Append(ThisAssembly.InformationalVersion)
+            .AppendLine("\")]")
+            .AppendLine("internal static class InjectioDecorationExtensions")
+            .AppendLine("{")
+            .IncrementIndent();
+
+        codeBuilder.AppendLines(DecorationHelperBody, skipFinalNewline: true);
+
+        codeBuilder
+            .AppendLine()
+            .DecrementIndent()
+            .AppendLine("}")
+            .DecrementIndent()
+            .AppendLine("}");
+
+        return codeBuilder.ToString();
+    }
+
+    private const string DecorationHelperBody = """
+internal static global::Microsoft.Extensions.DependencyInjection.IServiceCollection Decorate<TService>(
+    global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
+    global::System.Func<global::System.IServiceProvider, TService, TService> decoratorFactory)
+    where TService : class
+{
+    var serviceType = typeof(TService);
+
+    for (int i = 0; i < services.Count; i++)
+    {
+        var descriptor = services[i];
+        if (descriptor.ServiceType != serviceType)
+            continue;
+
+        if (IsKeyedDescriptor(descriptor))
+            continue;
+
+        var inner = CreateInnerFactory(descriptor);
+        var lifetime = descriptor.Lifetime;
+
+        services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+            serviceType,
+            sp => decoratorFactory(sp, (TService)inner(sp))!,
+            lifetime);
+    }
+
+    return services;
+}
+
+#if NET8_0_OR_GREATER
+internal static global::Microsoft.Extensions.DependencyInjection.IServiceCollection DecorateKeyed<TService>(
+    global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
+    object? serviceKey,
+    global::System.Func<global::System.IServiceProvider, object?, TService, TService> decoratorFactory)
+    where TService : class
+{
+    var serviceType = typeof(TService);
+    bool anyKey = ReferenceEquals(serviceKey, global::Microsoft.Extensions.DependencyInjection.KeyedService.AnyKey);
+
+    for (int i = 0; i < services.Count; i++)
+    {
+        var descriptor = services[i];
+        if (descriptor.ServiceType != serviceType)
+            continue;
+
+        if (!descriptor.IsKeyedService)
+            continue;
+
+        if (!anyKey && !global::System.Collections.Generic.EqualityComparer<object?>.Default.Equals(descriptor.ServiceKey, serviceKey))
+            continue;
+
+        var originalKey = descriptor.ServiceKey;
+        var innerKeyed = CreateInnerKeyedFactory(descriptor);
+        var lifetime = descriptor.Lifetime;
+
+        services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+            serviceType,
+            originalKey,
+            (sp, key) => decoratorFactory(sp, key, (TService)innerKeyed(sp, key))!,
+            lifetime);
+    }
+
+    return services;
+}
+#endif
+
+internal static global::Microsoft.Extensions.DependencyInjection.IServiceCollection DecorateOpenGeneric(
+    global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
+    global::System.Type openServiceType,
+    global::System.Type openDecoratorType)
+{
+    if (!openServiceType.IsGenericTypeDefinition)
+        openServiceType = openServiceType.GetGenericTypeDefinition();
+
+    if (!openDecoratorType.IsGenericTypeDefinition)
+        openDecoratorType = openDecoratorType.GetGenericTypeDefinition();
+
+    for (int i = 0; i < services.Count; i++)
+    {
+        var descriptor = services[i];
+        var serviceType = descriptor.ServiceType;
+
+        if (!serviceType.IsGenericType)
+            continue;
+
+        // skip truly open-generic descriptors; MS.DI forbids factory on open service types
+        // and replacing the implementation type would cause recursive resolution.
+        if (serviceType.IsGenericTypeDefinition)
+            continue;
+
+        if (serviceType.GetGenericTypeDefinition() != openServiceType)
+            continue;
+
+        var typeArgs = serviceType.GetGenericArguments();
+        global::System.Type closedDecoratorType;
+        try
+        {
+            closedDecoratorType = openDecoratorType.MakeGenericType(typeArgs);
+        }
+        catch (global::System.ArgumentException)
+        {
+            continue;
+        }
+
+#if NET8_0_OR_GREATER
+        if (descriptor.IsKeyedService)
+        {
+            var originalKey = descriptor.ServiceKey;
+            var innerKeyed = CreateInnerKeyedFactory(descriptor);
+            var lifetime = descriptor.Lifetime;
+
+            services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                serviceType,
+                originalKey,
+                (sp, key) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, innerKeyed(sp, key))!,
+                lifetime);
+            continue;
+        }
+#endif
+
+        var inner = CreateInnerFactory(descriptor);
+        var nonKeyedLifetime = descriptor.Lifetime;
+
+        services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+            serviceType,
+            sp => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, inner(sp))!,
+            nonKeyedLifetime);
+    }
+
+    return services;
+}
+
+private static bool IsKeyedDescriptor(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
+{
+#if NET8_0_OR_GREATER
+    return descriptor.IsKeyedService;
+#else
+    return false;
+#endif
+}
+
+private static global::System.Func<global::System.IServiceProvider, object> CreateInnerFactory(
+    global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
+{
+    if (descriptor.ImplementationInstance is object instance)
+        return _ => instance;
+
+    if (descriptor.ImplementationFactory is global::System.Func<global::System.IServiceProvider, object> factory)
+        return factory;
+
+    var implementationType = descriptor.ImplementationType ?? descriptor.ServiceType;
+    return sp => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, implementationType);
+}
+
+#if NET8_0_OR_GREATER
+private static global::System.Func<global::System.IServiceProvider, object?, object> CreateInnerKeyedFactory(
+    global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
+{
+    if (descriptor.KeyedImplementationInstance is object keyedInstance)
+        return (_, _) => keyedInstance;
+
+    if (descriptor.KeyedImplementationFactory is global::System.Func<global::System.IServiceProvider, object?, object> keyedFactory)
+        return keyedFactory;
+
+    var implementationType = descriptor.KeyedImplementationType ?? descriptor.ServiceType;
+    return (sp, _) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, implementationType);
+}
+#endif
+""";
 
     public static string GetServiceCollectionMethod(string duplicateStrategy)
     {
