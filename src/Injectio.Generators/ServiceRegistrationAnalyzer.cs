@@ -709,8 +709,9 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             ValidateFactoryMethod(context, classSymbol, implementationFactory!, location);
         }
 
-        // validate service type assignability
-        ValidateServiceTypes(context, classSymbol, serviceTypes, location);
+        // validate service type assignability (skip when a factory is specified, as the factory produces the service)
+        if (implementationFactory.IsNullOrWhiteSpace())
+            ValidateServiceTypes(context, classSymbol, serviceTypes, location);
     }
 
     private static void ValidateFactoryMethod(
