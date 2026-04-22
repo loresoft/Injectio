@@ -97,3 +97,13 @@ public class ServiceRegistrationInstance
 
     }
 }
+
+public interface IRepro { }
+
+[RegisterSingleton(Registration = RegistrationStrategy.Self)]
+[RegisterSingleton<Func<Repro>>(Factory = nameof(Factory))]
+internal sealed class Repro : IRepro
+{
+    internal static Func<Repro> Factory(IServiceProvider provider)
+        => provider.GetRequiredService<Repro>;
+}
