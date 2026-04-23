@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
+using Injectio.Generators.Infrastructure;
+
 using Microsoft.CodeAnalysis;
 
 namespace Injectio.Generators.Extensions;

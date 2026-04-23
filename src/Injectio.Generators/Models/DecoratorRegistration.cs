@@ -1,4 +1,6 @@
-namespace Injectio.Generators;
+using Injectio.Generators.Infrastructure;
+
+namespace Injectio.Generators.Models;
 
 public record DecoratorRegistration(
     string DecoratorType,

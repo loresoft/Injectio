@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using Injectio.Generators.Extensions;
+using Injectio.Generators.Infrastructure;
+using Injectio.Generators.Models;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -16,20 +18,76 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // find all classes and methods with attributes
-        var registrations = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                predicate: SyntacticPredicate,
-                transform: SemanticTransform
-            )
-            .Where(static context =>
-                context is not null
-                && (context.ServiceRegistrations?.Count > 0
-                    || context.ModuleRegistrations?.Count > 0
-                    || context.DecoratorRegistrations?.Count > 0)
-            )
+        // separate pipeline per attribute, each returning its specific model
+
+        var transientRegistrations = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.TransientAttributeFullName,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeTransientFullName))
+            .Where(static r => r is not null)
+            .Select(static (r, _) => r!)
+            .WithTrackingName("TransientRegistrations");
+
+        var scopedRegistrations = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.ScopedAttributeFullName,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeScopedFullName))
+            .Where(static r => r is not null)
+            .Select(static (r, _) => r!)
+            .WithTrackingName("ScopedRegistrations");
+
+        var singletonRegistrations = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.SingletonAttributeFullName,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeSingletonFullName))
+            .Where(static r => r is not null)
+            .Select(static (r, _) => r!)
+            .WithTrackingName("SingletonRegistrations");
+
+        var decoratorRegistrations = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.DecoratorAttributeFullName,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformDecoratorRegistration(ctx))
+            .Where(static r => r is not null)
+            .Select(static (r, _) => r!)
+            .WithTrackingName("DecoratorRegistrations");
+
+        var moduleRegistrations = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.ModuleAttributeFullName,
+                predicate: static (node, _) => node is MethodDeclarationSyntax,
+                transform: static (ctx, _) => TransformModuleRegistration(ctx))
+            .Where(static r => r is not null)
+            .Select(static (r, _) => r!)
+            .WithTrackingName("ModuleRegistrations");
+
+        // combine all service registration pipelines
+        var allServiceRegistrations = transientRegistrations
             .Collect()
-            .WithTrackingName("Registrations");
+            .Combine(scopedRegistrations.Collect())
+            .SelectMany(static (pair, _) => pair.Left.AddRange(pair.Right))
+            .Collect()
+            .Combine(singletonRegistrations.Collect())
+            .SelectMany(static (pair, _) => pair.Left.AddRange(pair.Right))
+            .Collect()
+            .WithTrackingName("AllServiceRegistrations");
+
+        var allModuleRegistrations = moduleRegistrations
+            .Collect()
+            .WithTrackingName("AllModuleRegistrations");
+
+        var allDecoratorRegistrations = decoratorRegistrations
+            .Collect()
+            .WithTrackingName("AllDecoratorRegistrations");
+
+        // combine into single context
+        var registrations = allServiceRegistrations
+            .Combine(allModuleRegistrations)
+            .Combine(allDecoratorRegistrations);
 
         // include compilation options
         var assemblyName = context.CompilationProvider
@@ -37,7 +95,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .WithTrackingName("AssemblyName");
 
         // include config options
-        var methodName = context.AnalyzerConfigOptionsProvider
+        var methodOptions = context.AnalyzerConfigOptionsProvider
             .Select(static (c, _) =>
             {
                 c.GlobalOptions.TryGetValue("build_property.InjectioName", out var methodName);
@@ -46,52 +104,50 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             })
             .WithTrackingName("Options");
 
-        var options = assemblyName.Combine(methodName);
-        var generation = registrations.Combine(options);
+        var options = assemblyName.Combine(methodOptions);
+        var generation = registrations
+            .Combine(options)
+            .Select(static (source, _) => new RegistrationContext(
+                ServiceRegistrations: new EquatableArray<ServiceRegistration>(source.Left.Left.Left),
+                ModuleRegistrations: new EquatableArray<ModuleRegistration>(source.Left.Left.Right),
+                DecoratorRegistrations: new EquatableArray<DecoratorRegistration>(source.Left.Right),
+                AssemblyName: source.Right.Left,
+                MethodOptions: source.Right.Right)
+            );
 
         context.RegisterSourceOutput(generation, ExecuteGeneration);
     }
 
-    private void ExecuteGeneration(
-        SourceProductionContext sourceContext,
-        (ImmutableArray<ServiceRegistrationContext?> Registrations, (string? AssemblyName, MethodOptions? MethodOptions) Options) source)
+    private void ExecuteGeneration(SourceProductionContext sourceContext, RegistrationContext source)
     {
-        var serviceRegistrations = source.Registrations
-            .SelectMany(m => m?.ServiceRegistrations ?? Array.Empty<ServiceRegistration>())
-            .Where(m => m is not null)
-            .ToArray();
+        var serviceRegistrations = source.ServiceRegistrations.AsArray();
 
-        var moduleRegistrations = source.Registrations
-            .SelectMany(m => m?.ModuleRegistrations ?? Array.Empty<ModuleRegistration>())
-            .Where(m => m is not null)
-            .ToArray();
+        var moduleRegistrations = source.ModuleRegistrations.AsArray();
 
-        var decoratorRegistrations = source.Registrations
-            .SelectMany(m => m?.DecoratorRegistrations ?? Array.Empty<DecoratorRegistration>())
-            .Where(m => m is not null)
+        var decoratorRegistrations = source.DecoratorRegistrations
             .OrderBy(m => m.ServiceType, StringComparer.Ordinal)
             .ThenBy(m => m.Order)
             .ThenBy(m => m.DecoratorType, StringComparer.Ordinal)
             .ToArray();
 
         // compute extension method name
-        var methodName = source.Options.MethodOptions?.Name;
+        var methodName = source.MethodOptions?.Name;
         if (methodName.IsNullOrWhiteSpace())
-            methodName = Regex.Replace(source.Options.AssemblyName, "\\W", "");
+            methodName = Regex.Replace(source.AssemblyName ?? string.Empty, "\\W", "");
 
-        var methodInternal = source.Options.MethodOptions?.Internal;
+        var methodInternal = source.MethodOptions?.Internal;
 
         // generate registration method
         var result = ServiceRegistrationWriter.GenerateExtensionClass(
             moduleRegistrations,
             serviceRegistrations,
             decoratorRegistrations,
-            source.Options.AssemblyName,
+            source.AssemblyName,
             methodName,
             methodInternal);
 
         // add source file
-        sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
+        sourceContext.AddSource("Injectio.Extension.g.cs", SourceText.From(result, Encoding.UTF8));
 
         // emit decoration helper if any decorators discovered
         if (decoratorRegistrations.Length > 0)
@@ -101,109 +157,60 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         }
     }
 
-    private static bool SyntacticPredicate(SyntaxNode syntaxNode, CancellationToken cancellationToken)
+    private static bool IsNonAbstractNonStaticType(SyntaxNode node)
     {
-        return syntaxNode switch
-        {
-            ClassDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
-                !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
-                && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword),
-
-            RecordDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
-                !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
-                && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword),
-
-            MemberDeclarationSyntax { AttributeLists.Count: > 0 } declaration =>
-                !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword),
-
-            _ => false,
-        };
+        return node is TypeDeclarationSyntax declaration
+            and (ClassDeclarationSyntax or RecordDeclarationSyntax)
+            && !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
+            && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword);
     }
 
-    private static ServiceRegistrationContext? SemanticTransform(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    private static ServiceRegistration? TransformServiceRegistration(GeneratorAttributeSyntaxContext context, string serviceLifetime)
     {
-        return context.Node switch
+        if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
+            return null;
+
+        // find matching attributes for this specific lifetime
+        foreach (var attribute in context.Attributes)
         {
-            ClassDeclarationSyntax => SemanticTransformClass(context),
-            RecordDeclarationSyntax => SemanticTransformClass(context),
-            MethodDeclarationSyntax => SemanticTransformMethod(context),
-            _ => null
-        };
+            var registration = CreateServiceRegistration(classSymbol, attribute, serviceLifetime);
+            if (registration is not null)
+                return registration;
+        }
+
+        return null;
     }
 
-    private static ServiceRegistrationContext? SemanticTransformMethod(GeneratorSyntaxContext context)
+    private static DecoratorRegistration? TransformDecoratorRegistration(GeneratorAttributeSyntaxContext context)
     {
-        if (context.Node is not MethodDeclarationSyntax methodDeclaration)
+        if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
             return null;
 
-        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclaration);
-        if (methodSymbol is null)
-            return null;
+        foreach (var attribute in context.Attributes)
+        {
+            var decorator = CreateDecoratorRegistration(classSymbol, attribute);
+            if (decorator is not null)
+                return decorator;
+        }
 
-        // make sure attribute is for registration
-        var attributes = methodSymbol.GetAttributes();
-        var isKnown = attributes.Any(SymbolHelpers.IsMethodAttribute);
-        if (!isKnown)
+        return null;
+    }
+
+    private static ModuleRegistration? TransformModuleRegistration(GeneratorAttributeSyntaxContext context)
+    {
+        if (context.TargetSymbol is not IMethodSymbol methodSymbol)
             return null;
 
         var (isValid, hasTagCollection) = ValidateMethod(methodSymbol);
         if (!isValid)
             return null;
 
-        var registration = new ModuleRegistration
-        (
+        return new ModuleRegistration(
             ClassName: methodSymbol.ContainingType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat),
             MethodName: methodSymbol.Name,
             IsStatic: methodSymbol.IsStatic,
             HasTagCollection: hasTagCollection
         );
-
-        return new ServiceRegistrationContext(ModuleRegistrations: new[] { registration });
-    }
-
-    private static ServiceRegistrationContext? SemanticTransformClass(GeneratorSyntaxContext context)
-    {
-        if (context.Node is not (TypeDeclarationSyntax declaration and (ClassDeclarationSyntax or RecordDeclarationSyntax)))
-            return null;
-
-        var classSymbol = context.SemanticModel.GetDeclaredSymbol(declaration);
-        if (classSymbol is null)
-            return null;
-
-        var attributes = classSymbol.GetAttributes();
-
-        // support multiple register attributes on a class
-        var registrations = new List<ServiceRegistration>();
-        var decorators = new List<DecoratorRegistration>();
-
-        foreach (var attribute in attributes)
-        {
-            if (SymbolHelpers.IsDecoratorAttribute(attribute))
-            {
-                var decorator = CreateDecoratorRegistration(classSymbol, attribute);
-                if (decorator is not null)
-                    decorators.Add(decorator);
-                continue;
-            }
-
-            var registration = CreateServiceRegistration(classSymbol, attribute);
-            if (registration is not null)
-                registrations.Add(registration);
-        }
-
-        if (registrations.Count == 0 && decorators.Count == 0)
-            return null;
-
-        EquatableArray<ServiceRegistration>? serviceArray = registrations.Count > 0
-            ? new EquatableArray<ServiceRegistration>(registrations.ToArray())
-            : (EquatableArray<ServiceRegistration>?)null;
-        EquatableArray<DecoratorRegistration>? decoratorArray = decorators.Count > 0
-            ? new EquatableArray<DecoratorRegistration>(decorators.ToArray())
-            : (EquatableArray<DecoratorRegistration>?)null;
-
-        return new ServiceRegistrationContext(
-            ServiceRegistrations: serviceArray,
-            DecoratorRegistrations: decoratorArray);
     }
 
     private static DecoratorRegistration? CreateDecoratorRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
@@ -347,12 +354,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return (false, false);
     }
 
-    private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute)
+    private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute, string serviceLifetime)
     {
-        // check for known attribute
-        if (!SymbolHelpers.IsKnownAttribute(attribute, out var serviceLifetime))
-            return null;
-
         // defaults
         var serviceTypes = new HashSet<string>();
         string implementationType = null!;
@@ -456,6 +459,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         bool includeInterfaces = registrationStrategy is KnownTypes.RegistrationStrategyImplementedInterfacesShortName
             or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
             or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+
         if (includeInterfaces)
         {
             foreach (var implementedInterface in classSymbol.AllInterfaces)
@@ -476,6 +480,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         bool includeSelf = registrationStrategy is KnownTypes.RegistrationStrategySelfShortName
             or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
             or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+
         if (includeSelf || serviceTypes.Count == 0)
             serviceTypes.Add(implementationType!);
 

@@ -1,4 +1,6 @@
 using Injectio.Generators.Extensions;
+using Injectio.Generators.Infrastructure;
+using Injectio.Generators.Models;
 
 namespace Injectio.Generators;
 

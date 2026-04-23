@@ -27,7 +27,8 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             DiagnosticDescriptors.DecoratorFactoryNotFound,
             DiagnosticDescriptors.DecoratorFactoryInvalidSignature,
             DiagnosticDescriptors.DecoratorOpenGenericKeyed,
-            DiagnosticDescriptors.DecoratorTargetNotRegistered);
+            DiagnosticDescriptors.DecoratorTargetNotRegistered
+        );
 
     public override void Initialize(AnalysisContext context)
     {

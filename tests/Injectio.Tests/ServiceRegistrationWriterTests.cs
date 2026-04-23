@@ -1,12 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 using Injectio.Generators;
-
-using VerifyXunit;
-
-using Xunit;
+using Injectio.Generators.Models;
 
 namespace Injectio.Tests;
 

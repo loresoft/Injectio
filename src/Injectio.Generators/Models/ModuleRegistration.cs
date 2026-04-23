@@ -1,4 +1,4 @@
-namespace Injectio.Generators;
+namespace Injectio.Generators.Models;
 
 public record ModuleRegistration(
     string ClassName,
