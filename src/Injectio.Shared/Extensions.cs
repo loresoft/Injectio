@@ -73,23 +73,58 @@ namespace Injectio.Extensions
             global::System.Func<global::System.IServiceProvider, TService, TService> decoratorFactory)
             where TService : class
         {
-            var serviceType = typeof(TService);
+            if (services is null)
+                throw new global::System.ArgumentNullException(nameof(services));
 
-            for (int i = 0; i < services.Count; i++)
+            if (decoratorFactory is null)
+                throw new global::System.ArgumentNullException(nameof(decoratorFactory));
+
+            var serviceType = typeof(TService);
+            int count = services.Count;
+
+            for (int i = 0; i < count; i++)
             {
                 var descriptor = services[i];
+
+                // Only rewrite matching non-keyed descriptors for the requested service type.
                 if (descriptor.ServiceType != serviceType)
                     continue;
 
                 if (IsKeyedDescriptor(descriptor))
                     continue;
 
-                var inner = CreateInnerFactory(descriptor);
                 var lifetime = descriptor.Lifetime;
 
+                if (descriptor.ImplementationInstance is object instance)
+                {
+                    // Wrap pre-built singleton/instance registrations without re-creating the inner service.
+                    services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                        serviceType: serviceType,
+                        factory: sp => decoratorFactory(sp, (TService)instance),
+                        lifetime: lifetime
+                    );
+
+                    continue;
+                }
+
+                if (descriptor.ImplementationFactory is global::System.Func<global::System.IServiceProvider, object> factory)
+                {
+                    // Preserve factory semantics by resolving inner through the original factory.
+                    services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                        serviceType: serviceType,
+                        factory: sp => decoratorFactory(sp, (TService)factory(sp)),
+                        lifetime: lifetime
+                    );
+
+                    continue;
+                }
+
+                var implementationType = descriptor.ImplementationType ?? descriptor.ServiceType;
+
+                // Type registrations are activated first, then passed as the inner instance to the decorator.
                 services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
                     serviceType: serviceType,
-                    factory: sp => decoratorFactory(sp, (TService)inner(sp))!,
+                    factory: sp => decoratorFactory(sp, (TService)global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, implementationType))!,
                     lifetime: lifetime
                 );
             }
@@ -118,6 +153,7 @@ namespace Injectio.Extensions
             where TService : class
             where TDecorator : class, TService
         {
+            // Delegate to the factory-based overload so stacking and lifetime behavior stay centralized.
             return services.Decorate<TService>(
                 (sp, inner) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<TDecorator>(sp, inner));
         }
@@ -152,12 +188,21 @@ namespace Injectio.Extensions
             global::System.Func<global::System.IServiceProvider, object?, TService, TService> decoratorFactory)
             where TService : class
         {
+            if (services is null)
+                throw new global::System.ArgumentNullException(nameof(services));
+
+            if (decoratorFactory is null)
+                throw new global::System.ArgumentNullException(nameof(decoratorFactory));
+
             var serviceType = typeof(TService);
             bool anyKey = ReferenceEquals(serviceKey, global::Microsoft.Extensions.DependencyInjection.KeyedService.AnyKey);
+            int count = services.Count;
 
-            for (int i = 0; i < services.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 var descriptor = services[i];
+
+                // Only rewrite matching keyed descriptors for the requested service type/key.
                 if (descriptor.ServiceType != serviceType)
                     continue;
 
@@ -168,13 +213,39 @@ namespace Injectio.Extensions
                     continue;
 
                 var originalKey = descriptor.ServiceKey;
-                var innerKeyed = CreateInnerKeyedFactory(descriptor);
                 var lifetime = descriptor.Lifetime;
 
+                if (descriptor.KeyedImplementationInstance is object keyedInstance)
+                {
+                    // Wrap pre-built keyed instances directly.
+                    services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                        serviceType: serviceType,
+                        serviceKey: originalKey,
+                        factory: (sp, key) => decoratorFactory(sp, key, (TService)keyedInstance),
+                        lifetime: lifetime);
+
+                    continue;
+                }
+
+                if (descriptor.KeyedImplementationFactory is global::System.Func<global::System.IServiceProvider, object?, object> keyedFactory)
+                {
+                    // Flow the runtime key through keyed factories to preserve original keyed behavior.
+                    services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                        serviceType: serviceType,
+                        serviceKey: originalKey,
+                        factory: (sp, key) => decoratorFactory(sp, key, (TService)keyedFactory(sp, key)),
+                        lifetime: lifetime);
+
+                    continue;
+                }
+
+                var implementationType = descriptor.KeyedImplementationType ?? descriptor.ServiceType;
+
+                // For keyed type registrations, resolve by type and decorate; key remains a descriptor selector.
                 services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
                     serviceType: serviceType,
                     serviceKey: originalKey,
-                    factory: (sp, key) => decoratorFactory(sp, key, (TService)innerKeyed(sp, key))!,
+                    factory: (sp, key) => decoratorFactory(sp, key, (TService)global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, implementationType)),
                     lifetime: lifetime);
             }
 
@@ -204,6 +275,7 @@ namespace Injectio.Extensions
             where TService : class
             where TDecorator : class, TService
         {
+            // Delegate to the keyed factory overload so key matching behavior is shared in one place.
             return services.DecorateKeyed<TService>(
                 serviceKey,
                 (sp, key, inner) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<TDecorator>(sp, inner));
@@ -237,17 +309,28 @@ namespace Injectio.Extensions
             global::System.Type openServiceType,
             global::System.Type openDecoratorType)
         {
+            if (services is null)
+                throw new global::System.ArgumentNullException(nameof(services));
+
+            if (openServiceType is null)
+                throw new global::System.ArgumentNullException(nameof(openServiceType));
+
+            if (openDecoratorType is null)
+                throw new global::System.ArgumentNullException(nameof(openDecoratorType));
+
             if (!openServiceType.IsGenericTypeDefinition)
                 openServiceType = openServiceType.GetGenericTypeDefinition();
 
             if (!openDecoratorType.IsGenericTypeDefinition)
                 openDecoratorType = openDecoratorType.GetGenericTypeDefinition();
 
-            for (int i = 0; i < services.Count; i++)
+            int count = services.Count;
+            for (int i = 0; i < count; i++)
             {
                 var descriptor = services[i];
                 var serviceType = descriptor.ServiceType;
 
+                // Only closed generic registrations can be rewritten safely.
                 if (!serviceType.IsGenericType)
                     continue;
 
@@ -263,10 +346,12 @@ namespace Injectio.Extensions
                 global::System.Type closedDecoratorType;
                 try
                 {
+                    // Close the open decorator over the current service type arguments.
                     closedDecoratorType = openDecoratorType.MakeGenericType(typeArgs);
                 }
                 catch (global::System.ArgumentException)
                 {
+                    // Skip incompatible generic argument combinations.
                     continue;
                 }
 
@@ -274,25 +359,76 @@ namespace Injectio.Extensions
                 if (descriptor.IsKeyedService)
                 {
                     var originalKey = descriptor.ServiceKey;
-                    var innerKeyed = CreateInnerKeyedFactory(descriptor);
                     var lifetime = descriptor.Lifetime;
 
+                    if (descriptor.KeyedImplementationInstance is object keyedInstance)
+                    {
+                        // For implementation instances, the key selects the descriptor; the instance is already materialized.
+                        services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                            serviceType: serviceType,
+                            serviceKey: originalKey,
+                            factory: (sp, _) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, keyedInstance),
+                            lifetime: lifetime);
+
+                        continue;
+                    }
+
+                    if (descriptor.KeyedImplementationFactory is global::System.Func<global::System.IServiceProvider, object?, object> keyedFactory)
+                    {
+                        // Factory registrations are key-aware by contract, so the runtime key must flow to the inner factory.
+                        services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                            serviceType: serviceType,
+                            serviceKey: originalKey,
+                            factory: (sp, key) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, keyedFactory(sp, key)),
+                            lifetime: lifetime);
+
+                        continue;
+                    }
+
+                    var keyedImplementationType = descriptor.KeyedImplementationType ?? descriptor.ServiceType;
+
+                    // For type-based activation, MS.DI uses the key for descriptor selection, not as an implicit ctor argument.
+                    // Passing key into CreateInstance could bind to arbitrary object parameters and change activation semantics.
                     services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
                         serviceType: serviceType,
                         serviceKey: originalKey,
-                        factory: (sp, key) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, innerKeyed(sp, key)),
+                        factory: (sp, _) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, keyedImplementationType)),
                         lifetime: lifetime);
 
                     continue;
                 }
 #endif
 
-                var inner = CreateInnerFactory(descriptor);
                 var nonKeyedLifetime = descriptor.Lifetime;
 
+                if (descriptor.ImplementationInstance is object instance)
+                {
+                    // Wrap non-keyed implementation instances directly.
+                    services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                        serviceType: serviceType,
+                        factory: sp => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, instance),
+                        lifetime: nonKeyedLifetime);
+
+                    continue;
+                }
+
+                if (descriptor.ImplementationFactory is global::System.Func<global::System.IServiceProvider, object> factory)
+                {
+                    // Preserve factory semantics by resolving inner through the original factory.
+                    services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
+                        serviceType: serviceType,
+                        factory: sp => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, factory(sp)),
+                        lifetime: nonKeyedLifetime);
+
+                    continue;
+                }
+
+                var implementationType = descriptor.ImplementationType ?? descriptor.ServiceType;
+
+                // Type registrations are activated and then wrapped by the closed decorator.
                 services[i] = new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
                     serviceType: serviceType,
-                    factory: sp => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, inner(sp)),
+                    factory: sp => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, closedDecoratorType, global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, implementationType)),
                     lifetime: nonKeyedLifetime);
             }
 
@@ -303,39 +439,13 @@ namespace Injectio.Extensions
             global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
         {
 #if NET8_0_OR_GREATER
+            // On .NET 8+, keyed metadata is available directly on the descriptor.
             return descriptor.IsKeyedService;
 #else
+            // Keyed services are unavailable on older target frameworks.
             return false;
 #endif
         }
-
-        private static global::System.Func<global::System.IServiceProvider, object> CreateInnerFactory(
-            global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
-        {
-            if (descriptor.ImplementationInstance is object instance)
-                return _ => instance;
-
-            if (descriptor.ImplementationFactory is global::System.Func<global::System.IServiceProvider, object> factory)
-                return factory;
-
-            var implementationType = descriptor.ImplementationType ?? descriptor.ServiceType;
-            return sp => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, implementationType);
-        }
-
-#if NET8_0_OR_GREATER
-        private static global::System.Func<global::System.IServiceProvider, object?, object> CreateInnerKeyedFactory(
-            global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
-        {
-            if (descriptor.KeyedImplementationInstance is object keyedInstance)
-                return (_, _) => keyedInstance;
-
-            if (descriptor.KeyedImplementationFactory is global::System.Func<global::System.IServiceProvider, object?, object> keyedFactory)
-                return keyedFactory;
-
-            var implementationType = descriptor.KeyedImplementationType ?? descriptor.ServiceType;
-            return (sp, _) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(sp, implementationType);
-        }
-#endif
 
     }
 }
