@@ -1,4 +1,4 @@
-﻿namespace Injectio.Generators;
+namespace Injectio.Generators.Models;
 
 public record MethodOptions(
     string? Name,

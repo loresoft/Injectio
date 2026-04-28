@@ -10,18 +10,30 @@ public static class KnownTypes
     public const string TransientAttributeShortName = "RegisterTransient";
     public const string TransientAttributeTypeName = $"{TransientAttributeShortName}Attribute";
     public const string TransientAttributeFullName = $"{AbstractionNamespace}.{TransientAttributeTypeName}";
+    public const string TransientAttributeFullNameT1 = $"{TransientAttributeFullName}`1";
+    public const string TransientAttributeFullNameT2 = $"{TransientAttributeFullName}`2";
 
     public const string SingletonAttributeShortName = "RegisterSingleton";
     public const string SingletonAttributeTypeName = $"{SingletonAttributeShortName}Attribute";
     public const string SingletonAttributeFullName = $"{AbstractionNamespace}.{SingletonAttributeTypeName}";
+    public const string SingletonAttributeFullNameT1 = $"{SingletonAttributeFullName}`1";
+    public const string SingletonAttributeFullNameT2 = $"{SingletonAttributeFullName}`2";
 
     public const string ScopedAttributeShortName = "RegisterScoped";
     public const string ScopedAttributeTypeName = $"{ScopedAttributeShortName}Attribute";
     public const string ScopedAttributeFullName = $"{AbstractionNamespace}.{ScopedAttributeTypeName}";
+    public const string ScopedAttributeFullNameT1 = $"{ScopedAttributeFullName}`1";
+    public const string ScopedAttributeFullNameT2 = $"{ScopedAttributeFullName}`2";
 
     public const string ModuleAttributeShortName = "RegisterServices";
     public const string ModuleAttributeTypeName = $"{ModuleAttributeShortName}Attribute";
     public const string ModuleAttributeFullName = $"{AbstractionNamespace}.{ModuleAttributeTypeName}";
+
+    public const string DecoratorAttributeShortName = "RegisterDecorator";
+    public const string DecoratorAttributeTypeName = $"{DecoratorAttributeShortName}Attribute";
+    public const string DecoratorAttributeFullName = $"{AbstractionNamespace}.{DecoratorAttributeTypeName}";
+    public const string DecoratorAttributeFullNameT1 = $"{DecoratorAttributeFullName}`1";
+    public const string DecoratorAttributeFullNameT2 = $"{DecoratorAttributeFullName}`2";
 
 
     public const string ServiceLifetimeSingletonShortName = "Singleton";

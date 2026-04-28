@@ -17,20 +17,19 @@ Source generator that helps register attribute marked services in the dependency
 - Module method registration
 - Duplicate Strategy - Skip,Replace,Append
 - Registration Strategy - Self, Implemented Interfaces, Self With Interfaces
+- Decorator registration (`RegisterDecorator`) — no runtime dependencies
 
 ### Usage
+
+#### Requirements
+
+Requires Roslyn 4.14 or later. This means Visual Studio 2022 version 17.14+ or Visual Studio 2026+, a current Rider release, and the .NET 9.0.300 SDK or newer. Older toolchains will not load the analyzer.
 
 #### Add package
 
 Add the nuget package project to your projects.
 
 `dotnet add package Injectio`
-
-Prevent dependances from including Injectio
-
-```xml
-<PackageReference Include="Injectio" PrivateAssets="all" />
-```
 
 ### Registration Attributes
 
@@ -40,6 +39,7 @@ Place registration attribute on class.  The class will be discovered and registe
 - `[RegisterScoped]` Marks the class as a scoped service
 - `[RegisterTransient]` Marks the class as a transient service
 - `[RegisterServices]` Marks the method to be called to register services
+- `[RegisterDecorator]` Marks the class as a decorator around an existing service
 
 #### Attribute Properties
 
@@ -214,6 +214,119 @@ public class ServiceFactoryKeyed : IServiceKeyed
         return new ServiceFactoryKeyed(serviceKey);
     }
 
+}
+```
+
+#### Decorators
+
+Use the `RegisterDecorator` attribute to wrap an existing service registration without adding
+any runtime dependencies. The generator emits all decoration helpers directly into the
+consumer assembly.
+
+Decorators inherit the lifetime of the service they decorate. Apply multiple decorators by
+ordering them with the `Order` property — lower values are innermost (applied first), higher
+values are outermost (applied last).
+
+```c#
+public interface IService { }
+
+[RegisterSingleton<IService>]
+public class Service : IService { }
+
+[RegisterDecorator<IService>(Order = 1)]
+public class LoggingDecorator : IService
+{
+    public LoggingDecorator(IService inner) { }
+}
+
+[RegisterDecorator<IService>(Order = 2)]
+public class CachingDecorator : IService
+{
+    public CachingDecorator(IService inner) { }
+}
+```
+
+Resolution order for the sample above: `CachingDecorator → LoggingDecorator → Service`.
+
+##### Decorator Attribute Properties
+
+| Property           | Description                                                                                    |
+|--------------------|------------------------------------------------------------------------------------------------|
+| ServiceType        | The type of service to decorate. Required unless the generic attribute form is used.           |
+| ImplementationType | The decorator type. If not set, the class the attribute is on will be used.                    |
+| ServiceKey         | Decorate a specific keyed registration. Requires .NET 8+ Microsoft.Extensions.DependencyInjection. |
+| AnyKey             | When `true`, decorate every keyed registration of `ServiceType` regardless of its key.         |
+| Factory            | Name of a static factory method that builds the decorator.                                     |
+| Order              | Ordering within the decoration chain. Lower = innermost.                                       |
+| Tags               | Comma/semicolon-delimited list of registration tags.                                           |
+
+##### Keyed decoration
+
+Decorate a single keyed variant, or use `AnyKey` to decorate them all:
+
+```c#
+[RegisterSingleton<IService>(ServiceKey = "alpha")]
+public class AlphaService : IService { }
+
+[RegisterDecorator<IService>(AnyKey = true)]
+public class LoggingDecorator : IService
+{
+    public LoggingDecorator(IService inner) { }
+}
+```
+
+##### Factory-built decorators
+
+Provide a static factory on the decorator class for complex construction:
+
+```c#
+[RegisterDecorator<IService>(Factory = nameof(Create))]
+public class LoggingDecorator : IService
+{
+    public LoggingDecorator(IService inner) { }
+
+    public static IService Create(IServiceProvider serviceProvider, IService inner)
+        => new LoggingDecorator(inner);
+}
+```
+
+For keyed decorators the factory takes an additional `object?` parameter for the key:
+
+```c#
+public static IService Create(IServiceProvider serviceProvider, object? serviceKey, IService inner)
+    => new LoggingDecorator(inner);
+```
+
+##### Open-generic decoration
+
+Open-generic decorators apply to every closed registration of the matching service type.
+The generator supports decorating closed-generic registrations with an open-generic decorator
+class; purely open-generic implementation registrations (e.g. `(IRepo<>, Repo<>)`) are not
+decorated at runtime due to a Microsoft.Extensions.DependencyInjection limitation on factory
+registrations for open generic service types.
+
+```c#
+public interface IRepo<T> { }
+
+[RegisterSingleton<IRepo<string>, StringRepo>]
+public class StringRepo : IRepo<string> { }
+
+[RegisterDecorator(ServiceType = typeof(IRepo<>))]
+public class LoggingRepo<T> : IRepo<T>
+{
+    public LoggingRepo(IRepo<T> inner) { }
+}
+```
+
+##### Tags
+
+Decorators support the same tag-filtering as registrations:
+
+```c#
+[RegisterDecorator<IService>(Tags = "FrontEnd")]
+public class FrontEndLoggingDecorator : IService
+{
+    public FrontEndLoggingDecorator(IService inner) { }
 }
 ```
 

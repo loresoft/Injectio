@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 using AwesomeAssertions;
 
-using Injectio.Attributes;
 using Injectio.Generators;
 
 using Microsoft.CodeAnalysis;
@@ -37,12 +36,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -62,12 +56,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -87,12 +76,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -112,12 +96,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -145,12 +124,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -170,12 +144,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -197,12 +166,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -210,6 +174,7 @@ public class ServiceRegistrationGeneratorTests
     {
         const string source = """
 
+            using System;
             using Injectio.Attributes;
             using Microsoft.Extensions.DependencyInjection;
             using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -235,12 +200,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -273,12 +233,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -311,12 +266,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -349,12 +299,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -391,12 +336,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -417,12 +357,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -443,12 +378,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -469,12 +399,7 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
     [Fact]
@@ -495,15 +420,9 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
 
-#if NET7_0_OR_GREATER
     [Fact]
     public Task GenerateRegisterSingletonGeneric()
     {
@@ -521,25 +440,23 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
-        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
-
-        return Verifier
-            .Verify(output)
-            .UseDirectory("Snapshots")
-            .ScrubLinesContaining("GeneratedCodeAttribute");
+        return Verify(source);
     }
-#endif
 
     [Fact]
     public Task GenerateRegisterSingletonServiceKeys()
     {
         const string source = """
 
+            using System;
             using Injectio.Attributes;
             using Microsoft.Extensions.DependencyInjection;
             using Microsoft.Extensions.DependencyInjection.Extensions;
 
             namespace Injectio.Sample;
+
+            public interface IServiceKeyed
+            { }
 
             [RegisterSingleton(ServiceType = typeof(IServiceKeyed), ServiceKey = "Alpha")]
             public class ServiceAlphaKeyed : IServiceKeyed
@@ -585,6 +502,12 @@ public class ServiceRegistrationGeneratorTests
 
             """;
 
+        return Verify(source);
+    }
+
+
+    private static Task Verify(string source)
+    {
         var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
@@ -593,35 +516,44 @@ public class ServiceRegistrationGeneratorTests
             .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
-
     private static string GetGeneratedOutput<T>(string source)
         where T : IIncrementalGenerator, new()
     {
-        var syntaxTree = CSharpSyntaxTree.ParseText(source);
+        var parseOptions = CSharpParseOptions.Default.WithPreprocessorSymbols(
+            "NET7_0_OR_GREATER",
+            "NET8_0_OR_GREATER",
+            "NET9_0_OR_GREATER",
+            "NET10_0_OR_GREATER");
+
+        var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);
         var references = AppDomain.CurrentDomain.GetAssemblies()
             .Where(assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
             .Select(assembly => MetadataReference.CreateFromFile(assembly.Location))
-            .Concat(new[]
-            {
+            .Concat(
+            [
                 MetadataReference.CreateFromFile(typeof(T).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(RegisterServicesAttribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(IServiceCollection).Assembly.Location),
-            });
+            ]);
 
         var compilation = CSharpCompilation.Create(
             "Test.Generator",
-            new[] { syntaxTree },
+            [syntaxTree],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var originalTreeCount = compilation.SyntaxTrees.Length;
         var generator = new T();
 
-        var driver = CSharpGeneratorDriver.Create(generator);
-        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
+        var driver = CSharpGeneratorDriver.Create(
+            generators: [generator.AsSourceGenerator()],
+            parseOptions: parseOptions);
 
-        var trees = outputCompilation.SyntaxTrees.ToList();
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
 
-        return trees.Count != originalTreeCount ? trees[^1].ToString() : string.Empty;
+        var generated = outputCompilation.SyntaxTrees
+            .Skip(originalTreeCount)
+            .FirstOrDefault(t => Path.GetFileName(t.FilePath) == "Injectio.g.cs");
+
+        return generated?.ToString() ?? string.Empty;
     }
 }

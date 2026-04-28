@@ -20,7 +20,15 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             DiagnosticDescriptors.FactoryMethodInvalidSignature,
             DiagnosticDescriptors.ServiceTypeMismatch,
             DiagnosticDescriptors.AbstractImplementationType,
-            DiagnosticDescriptors.RegisterServicesMethodOnAbstractClass);
+            DiagnosticDescriptors.RegisterServicesMethodOnAbstractClass,
+            DiagnosticDescriptors.DecoratorDoesNotImplementService,
+            DiagnosticDescriptors.DecoratorMissingServiceType,
+            DiagnosticDescriptors.DecoratorMissingInnerConstructor,
+            DiagnosticDescriptors.DecoratorFactoryNotFound,
+            DiagnosticDescriptors.DecoratorFactoryInvalidSignature,
+            DiagnosticDescriptors.DecoratorOpenGenericKeyed,
+            DiagnosticDescriptors.DecoratorTargetNotRegistered
+        );
 
     public override void Initialize(AnalysisContext context)
     {
@@ -29,6 +37,234 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
         context.RegisterSymbolAction(AnalyzeMethod, SymbolKind.Method);
         context.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
+        context.RegisterCompilationStartAction(AnalyzeCompilation);
+    }
+
+    private static void AnalyzeCompilation(CompilationStartAnalysisContext context)
+    {
+        var decorators = new List<DecoratorInfo>();
+        var registeredServices = new HashSet<string>(StringComparer.Ordinal);
+        var hasModule = false;
+
+        context.RegisterSymbolAction(symbolContext =>
+        {
+            if (symbolContext.Symbol is IMethodSymbol methodSymbol)
+            {
+                foreach (var attribute in methodSymbol.GetAttributes())
+                {
+                    if (SymbolHelpers.IsMethodAttribute(attribute))
+                    {
+                        lock (registeredServices) hasModule = true;
+                        break;
+                    }
+                }
+                return;
+            }
+
+            if (symbolContext.Symbol is not INamedTypeSymbol classSymbol)
+                return;
+
+            if (classSymbol.IsStatic)
+                return;
+
+            var attributes = classSymbol.GetAttributes();
+
+            foreach (var attribute in attributes)
+            {
+                if (SymbolHelpers.IsDecoratorAttribute(attribute))
+                {
+                    var info = ExtractDecoratorInfo(classSymbol, attribute);
+                    if (info != null)
+                        lock (decorators) decorators.Add(info);
+                    continue;
+                }
+
+                if (!SymbolHelpers.IsKnownAttribute(attribute, out _))
+                    continue;
+
+                CollectRegisteredServiceTypes(classSymbol, attribute, registeredServices);
+            }
+        }, SymbolKind.NamedType, SymbolKind.Method);
+
+        context.RegisterCompilationEndAction(endContext =>
+        {
+            foreach (var decorator in decorators)
+            {
+                // INJ0015 — open-generic + keyed combination
+                if (decorator.IsOpenGeneric && (decorator.HasServiceKey || decorator.IsAnyKey))
+                {
+                    endContext.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.DecoratorOpenGenericKeyed,
+                        decorator.Location,
+                        decorator.DecoratorType,
+                        decorator.ServiceType));
+                }
+
+                // INJ0016 — target not registered (only when no module could register it dynamically)
+                if (!hasModule && !decorator.HasServiceKey && !decorator.IsAnyKey)
+                {
+                    if (!registeredServices.Contains(decorator.ServiceType))
+                    {
+                        endContext.ReportDiagnostic(Diagnostic.Create(
+                            DiagnosticDescriptors.DecoratorTargetNotRegistered,
+                            decorator.Location,
+                            decorator.DecoratorType,
+                            decorator.ServiceType));
+                    }
+                }
+            }
+        });
+    }
+
+    private sealed class DecoratorInfo
+    {
+        public string DecoratorType { get; set; } = string.Empty;
+        public string ServiceType { get; set; } = string.Empty;
+        public bool IsOpenGeneric { get; set; }
+        public bool HasServiceKey { get; set; }
+        public bool IsAnyKey { get; set; }
+        public Location Location { get; set; } = Location.None;
+    }
+
+    private static DecoratorInfo? ExtractDecoratorInfo(INamedTypeSymbol classSymbol, AttributeData attribute)
+    {
+        string? serviceType = null;
+        bool hasServiceKey = false;
+        bool isAnyKey = false;
+        bool isOpenGeneric = false;
+
+        var attributeClass = attribute.AttributeClass;
+        if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length >= 1)
+        {
+            var typeArgument = attributeClass.TypeArguments[0];
+            if (typeArgument is INamedTypeSymbol namedService && namedService.IsGenericType && namedService.IsUnboundGenericType)
+                isOpenGeneric = true;
+
+            serviceType = typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+        }
+
+        foreach (var parameter in attribute.NamedArguments)
+        {
+            var name = parameter.Key;
+            var value = parameter.Value.Value;
+
+            switch (name)
+            {
+                case "ServiceType":
+                    if (value is INamedTypeSymbol svc)
+                    {
+                        if (svc.IsGenericType && svc.IsUnboundGenericType)
+                            isOpenGeneric = true;
+                        serviceType = svc.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    }
+                    break;
+                case "ServiceKey":
+                    hasServiceKey = value is not null;
+                    break;
+                case "AnyKey":
+                    if (value is bool b)
+                        isAnyKey = b;
+                    break;
+            }
+        }
+
+        if (serviceType is null)
+            return null;
+
+        var location = classSymbol.Locations.Length > 0 ? classSymbol.Locations[0] : Location.None;
+
+        return new DecoratorInfo
+        {
+            DecoratorType = classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat),
+            ServiceType = serviceType,
+            IsOpenGeneric = isOpenGeneric,
+            HasServiceKey = hasServiceKey,
+            IsAnyKey = isAnyKey,
+            Location = location,
+        };
+    }
+
+    private static void CollectRegisteredServiceTypes(
+        INamedTypeSymbol classSymbol,
+        AttributeData attribute,
+        HashSet<string> registeredServices)
+    {
+        string? implementationType = null;
+        string? registrationStrategy = null;
+        var localServiceTypes = new List<string>();
+
+        var attributeClass = attribute.AttributeClass;
+        if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
+        {
+            for (var index = 0; index < attributeClass.TypeParameters.Length; index++)
+            {
+                var typeParameter = attributeClass.TypeParameters[index];
+                var typeArgument = attributeClass.TypeArguments[index];
+
+                if (typeParameter.Name == "TService" || index == 0)
+                    localServiceTypes.Add(typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+                else if (typeParameter.Name == "TImplementation" || index == 1)
+                    implementationType = typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+            }
+        }
+
+        foreach (var parameter in attribute.NamedArguments)
+        {
+            var name = parameter.Key;
+            var value = parameter.Value.Value;
+            if (value is null) continue;
+
+            switch (name)
+            {
+                case "ServiceType":
+                    if (value is INamedTypeSymbol svc)
+                        localServiceTypes.Add(svc.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+                    break;
+                case "ImplementationType":
+                    if (value is INamedTypeSymbol impl)
+                        implementationType = impl.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    break;
+                case "Registration":
+                    registrationStrategy = SymbolHelpers.ResolveRegistrationStrategy(value);
+                    break;
+            }
+        }
+
+        implementationType ??= classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+
+        if (registrationStrategy == null && localServiceTypes.Count == 0)
+            registrationStrategy = KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+
+        bool includeInterfaces = registrationStrategy is KnownTypes.RegistrationStrategyImplementedInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
+            or null;
+
+        if (includeInterfaces)
+        {
+            foreach (var iface in classSymbol.AllInterfaces)
+            {
+                if (iface.ConstructedFrom.ToString() == "System.IEquatable<T>")
+                    continue;
+
+                var unbound = SymbolHelpers.ToUnboundGenericType(iface);
+                localServiceTypes.Add(unbound.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+            }
+        }
+
+        bool includeSelf = registrationStrategy is KnownTypes.RegistrationStrategySelfShortName
+            or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
+            or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName
+            or null;
+
+        if (includeSelf || localServiceTypes.Count == 0)
+            localServiceTypes.Add(implementationType);
+
+        lock (registeredServices)
+        {
+            foreach (var t in localServiceTypes)
+                registeredServices.Add(t);
+        }
     }
 
     private static void AnalyzeMethod(SymbolAnalysisContext context)
@@ -126,15 +362,247 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
         foreach (var attribute in attributes)
         {
-            if (!SymbolHelpers.IsKnownAttribute(attribute, out _))
-                continue;
-
             var location = classSymbol.Locations.Length > 0
                 ? classSymbol.Locations[0]
                 : Location.None;
 
+            if (SymbolHelpers.IsDecoratorAttribute(attribute))
+            {
+                AnalyzeDecoratorAttribute(context, classSymbol, attribute, location);
+                continue;
+            }
+
+            if (!SymbolHelpers.IsKnownAttribute(attribute, out _))
+                continue;
+
             AnalyzeRegistrationAttribute(context, classSymbol, attribute, location);
         }
+    }
+
+    private static void AnalyzeDecoratorAttribute(
+        SymbolAnalysisContext context,
+        INamedTypeSymbol classSymbol,
+        AttributeData attribute,
+        Location location)
+    {
+        string? serviceTypeName = null;
+        INamedTypeSymbol? serviceTypeSymbol = null;
+        string? factory = null;
+        bool hasServiceKey = false;
+        bool isAnyKey = false;
+
+        var attributeClass = attribute.AttributeClass;
+        if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length >= 1)
+        {
+            if (attributeClass.TypeArguments[0] is INamedTypeSymbol serviceArg)
+            {
+                serviceTypeSymbol = serviceArg;
+                serviceTypeName = serviceArg.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+            }
+        }
+
+        foreach (var parameter in attribute.NamedArguments)
+        {
+            var name = parameter.Key;
+            var value = parameter.Value.Value;
+
+            switch (name)
+            {
+                case "ServiceType":
+                    if (value is INamedTypeSymbol svc)
+                    {
+                        serviceTypeSymbol = svc;
+                        serviceTypeName = svc.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    }
+                    break;
+                case "Factory":
+                    factory = value?.ToString();
+                    break;
+                case "ServiceKey":
+                    hasServiceKey = value is not null;
+                    break;
+                case "AnyKey":
+                    if (value is bool b)
+                        isAnyKey = b;
+                    break;
+            }
+        }
+
+        // INJ0011 — missing service type
+        if (serviceTypeName is null)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.DecoratorMissingServiceType,
+                location,
+                classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat)));
+            return;
+        }
+
+        // INJ0010 — class does not implement service
+        var classTypeName = classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+        if (serviceTypeName != classTypeName)
+        {
+            var implementsService = false;
+
+            foreach (var iface in classSymbol.AllInterfaces)
+            {
+                var ifaceName = iface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                if (ifaceName == serviceTypeName)
+                {
+                    implementsService = true;
+                    break;
+                }
+
+                var unboundIface = SymbolHelpers.ToUnboundGenericType(iface);
+                if (!SymbolEqualityComparer.Default.Equals(unboundIface, iface))
+                {
+                    var unboundName = unboundIface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    if (unboundName == serviceTypeName)
+                    {
+                        implementsService = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!implementsService)
+            {
+                var baseType = classSymbol.BaseType;
+                while (baseType is not null)
+                {
+                    var baseName = baseType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    if (baseName == serviceTypeName) { implementsService = true; break; }
+
+                    var unboundBase = SymbolHelpers.ToUnboundGenericType(baseType);
+                    if (!SymbolEqualityComparer.Default.Equals(unboundBase, baseType))
+                    {
+                        var unboundBaseName = unboundBase.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                        if (unboundBaseName == serviceTypeName) { implementsService = true; break; }
+                    }
+
+                    baseType = baseType.BaseType;
+                }
+            }
+
+            if (!implementsService)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DiagnosticDescriptors.DecoratorDoesNotImplementService,
+                    location,
+                    classTypeName,
+                    serviceTypeName));
+            }
+        }
+
+        // INJ0012/13/14 — constructor or factory validation
+        if (factory.HasValue())
+        {
+            ValidateDecoratorFactory(context, classSymbol, factory!, hasServiceKey || isAnyKey, location);
+        }
+        else
+        {
+            var hasCompatibleCtor = false;
+            foreach (var ctor in classSymbol.InstanceConstructors)
+            {
+                if (ctor.DeclaredAccessibility == Accessibility.Private) continue;
+                if (ctor.Parameters.Length == 0) continue;
+
+                var firstParamType = ctor.Parameters[0].Type.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                if (firstParamType == serviceTypeName)
+                {
+                    hasCompatibleCtor = true;
+                    break;
+                }
+
+                if (ctor.Parameters[0].Type is INamedTypeSymbol paramNamed)
+                {
+                    var unboundParam = SymbolHelpers.ToUnboundGenericType(paramNamed);
+                    if (!SymbolEqualityComparer.Default.Equals(unboundParam, paramNamed))
+                    {
+                        var unboundName = unboundParam.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                        if (unboundName == serviceTypeName)
+                        {
+                            hasCompatibleCtor = true;
+                            break;
+                        }
+                    }
+                }
+
+                // any parameter matches?
+                foreach (var param in ctor.Parameters)
+                {
+                    var paramType = param.Type.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    if (paramType == serviceTypeName)
+                    {
+                        hasCompatibleCtor = true;
+                        break;
+                    }
+                }
+
+                if (hasCompatibleCtor) break;
+            }
+
+            if (!hasCompatibleCtor && classSymbol.InstanceConstructors.Length > 0)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DiagnosticDescriptors.DecoratorMissingInnerConstructor,
+                    location,
+                    classTypeName,
+                    serviceTypeName));
+            }
+        }
+    }
+
+    private static void ValidateDecoratorFactory(
+        SymbolAnalysisContext context,
+        INamedTypeSymbol classSymbol,
+        string factoryMethodName,
+        bool isKeyed,
+        Location location)
+    {
+        var className = classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+        var members = classSymbol.GetMembers(factoryMethodName);
+        var factoryMethods = new List<IMethodSymbol>();
+
+        foreach (var member in members)
+        {
+            if (member is IMethodSymbol method)
+                factoryMethods.Add(method);
+        }
+
+        if (factoryMethods.Count == 0)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.DecoratorFactoryNotFound,
+                location,
+                factoryMethodName,
+                className));
+            return;
+        }
+
+        var expectedParamCount = isKeyed ? 3 : 2;
+
+        foreach (var method in factoryMethods)
+        {
+            if (!method.IsStatic) continue;
+            if (method.Parameters.Length != expectedParamCount) continue;
+
+            if (!SymbolHelpers.IsServiceProvider(method.Parameters[0])) continue;
+
+            if (isKeyed)
+            {
+                if (method.Parameters[1].Type.SpecialType != SpecialType.System_Object) continue;
+                // parameter[2] is the inner service — not strictly checked
+            }
+
+            return; // valid overload found
+        }
+
+        context.ReportDiagnostic(Diagnostic.Create(
+            DiagnosticDescriptors.DecoratorFactoryInvalidSignature,
+            location,
+            factoryMethodName,
+            className));
     }
 
     private static void AnalyzeRegistrationAttribute(

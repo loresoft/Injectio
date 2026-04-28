@@ -1,4 +1,6 @@
 using Injectio.Generators.Extensions;
+using Injectio.Generators.Infrastructure;
+using Injectio.Generators.Models;
 
 namespace Injectio.Generators;
 
@@ -8,6 +10,15 @@ public static class ServiceRegistrationWriter
     public static string GenerateExtensionClass(
         IReadOnlyList<ModuleRegistration> moduleRegistrations,
         IReadOnlyList<ServiceRegistration> serviceRegistrations,
+        string? assemblyName,
+        string? methodName,
+        string? methodInternal)
+        => GenerateExtensionClass(moduleRegistrations, serviceRegistrations, Array.Empty<DecoratorRegistration>(), assemblyName, methodName, methodInternal);
+
+    public static string GenerateExtensionClass(
+        IReadOnlyList<ModuleRegistration> moduleRegistrations,
+        IReadOnlyList<ServiceRegistration> serviceRegistrations,
+        IReadOnlyList<DecoratorRegistration> decoratorRegistrations,
         string? assemblyName,
         string? methodName,
         string? methodInternal)
@@ -64,6 +75,11 @@ public static class ServiceRegistrationWriter
         foreach (var serviceRegistration in serviceRegistrations)
         {
             WriteRegistration(codeBuilder, serviceRegistration);
+        }
+
+        foreach (var decoratorRegistration in decoratorRegistrations)
+        {
+            WriteDecorator(codeBuilder, decoratorRegistration);
         }
 
         codeBuilder
@@ -318,6 +334,165 @@ public static class ServiceRegistrationWriter
             .DecrementIndent()
             .AppendLine(");")
             .AppendLine();
+    }
+
+    private static void WriteDecorator(
+        IndentedStringBuilder codeBuilder,
+        DecoratorRegistration decorator)
+    {
+        if (decorator.Tags.Count > 0)
+        {
+            codeBuilder
+                .Append("if (tagSet.Count == 0 || tagSet.Intersect(new[] { ");
+
+            bool wroteTag = false;
+            foreach (var tag in decorator.Tags)
+            {
+                if (wroteTag)
+                    codeBuilder.Append(", ");
+
+                codeBuilder
+                    .Append("\"")
+                    .Append(tag)
+                    .Append("\"");
+
+                wroteTag = true;
+            }
+
+            codeBuilder
+                .AppendLine(" }).Any())")
+                .AppendLine("{")
+                .IncrementIndent();
+        }
+
+        var serviceType = decorator.ServiceType;
+        var decoratorType = decorator.DecoratorType;
+        bool hasServiceKey = decorator.ServiceKey.HasValue();
+        bool isKeyed = hasServiceKey || decorator.IsAnyKey;
+
+        // resolve the service key expression passed to the helper
+        string keyExpression;
+        if (decorator.IsAnyKey)
+            keyExpression = "global::Microsoft.Extensions.DependencyInjection.KeyedService.AnyKey";
+        else if (hasServiceKey)
+            keyExpression = decorator.ServiceKey!;
+        else
+            keyExpression = "null";
+
+        if (decorator.IsOpenGeneric)
+        {
+            codeBuilder
+                .Append("global::Injectio.Extensions.DecorationExtensions.DecorateOpenGeneric(")
+                .AppendLine()
+                .IncrementIndent()
+                .AppendLine("serviceCollection,")
+                .Append("typeof(")
+                .AppendIf("global::", !serviceType.StartsWith("global::"))
+                .Append(serviceType)
+                .AppendLine("),")
+                .Append("typeof(")
+                .AppendIf("global::", !decoratorType.StartsWith("global::"))
+                .Append(decoratorType)
+                .AppendLine(")")
+                .DecrementIndent()
+                .AppendLine(");")
+                .AppendLine();
+        }
+        else if (isKeyed)
+        {
+            codeBuilder
+                .Append("global::Injectio.Extensions.DecorationExtensions.DecorateKeyed<")
+                .AppendIf("global::", !serviceType.StartsWith("global::"))
+                .Append(serviceType)
+                .AppendLine(">(")
+                .IncrementIndent()
+                .AppendLine("serviceCollection,")
+                .Append(keyExpression)
+                .AppendLine(",");
+
+            WriteDecoratorFactory(codeBuilder, decorator, isKeyed: true);
+
+            codeBuilder
+                .AppendLine()
+                .DecrementIndent()
+                .AppendLine(");")
+                .AppendLine();
+        }
+        else
+        {
+            codeBuilder
+                .Append("global::Injectio.Extensions.DecorationExtensions.Decorate<")
+                .AppendIf("global::", !serviceType.StartsWith("global::"))
+                .Append(serviceType)
+                .AppendLine(">(")
+                .IncrementIndent()
+                .AppendLine("serviceCollection,");
+
+            WriteDecoratorFactory(codeBuilder, decorator, isKeyed: false);
+
+            codeBuilder
+                .AppendLine()
+                .DecrementIndent()
+                .AppendLine(");")
+                .AppendLine();
+        }
+
+        if (decorator.Tags.Count > 0)
+        {
+            codeBuilder
+                .DecrementIndent()
+                .AppendLine("}")
+                .AppendLine();
+        }
+    }
+
+    private static void WriteDecoratorFactory(
+        IndentedStringBuilder codeBuilder,
+        DecoratorRegistration decorator,
+        bool isKeyed)
+    {
+        var serviceType = decorator.ServiceType;
+        var decoratorType = decorator.DecoratorType;
+        var qualifiedService = serviceType.StartsWith("global::") ? serviceType : "global::" + serviceType;
+        var qualifiedDecorator = decoratorType.StartsWith("global::") ? decoratorType : "global::" + decoratorType;
+
+        if (decorator.Factory.HasValue())
+        {
+            bool hasNamespace = decorator.Factory!.Contains(".");
+            var factoryTarget = hasNamespace ? decorator.Factory! : qualifiedDecorator + "." + decorator.Factory;
+
+            if (isKeyed)
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, serviceKey, inner) => ")
+                    .Append(factoryTarget)
+                    .Append("(serviceProvider, serviceKey, inner)");
+            }
+            else
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, inner) => ")
+                    .Append(factoryTarget)
+                    .Append("(serviceProvider, inner)");
+            }
+        }
+        else
+        {
+            if (isKeyed)
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, serviceKey, inner) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<")
+                    .Append(qualifiedDecorator)
+                    .Append(">(serviceProvider, inner)");
+            }
+            else
+            {
+                codeBuilder
+                    .Append("static (serviceProvider, inner) => global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<")
+                    .Append(qualifiedDecorator)
+                    .Append(">(serviceProvider, inner)");
+            }
+        }
     }
 
     public static string GetServiceCollectionMethod(string duplicateStrategy)

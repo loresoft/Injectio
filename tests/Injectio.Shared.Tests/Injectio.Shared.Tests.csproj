@@ -10,23 +10,16 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="coverlet.MTP" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-    <PackageReference Include="Verify.XunitV3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="xunit.v3.mtp-v2" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Injectio.Generators\Injectio.Generators.csproj" >
-      <OutputItemType>Analyzer</OutputItemType>
-      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-    </ProjectReference>
+    <Compile Include="..\..\src\Injectio.Shared\Extensions.cs" Link="Extensions.cs" />
+    <Compile Include="..\..\src\Injectio.Shared\Infrastructure\EmbeddedAttribute.cs" Link="EmbeddedAttribute.cs" />
   </ItemGroup>
 
   <ItemGroup>
