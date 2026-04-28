@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -19,6 +17,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        // add embedded attributes and extensions as additional files to compilation
         context.RegisterPostInitializationOutput(static ctx =>
         {
             ctx.AddEmbeddedAttributeDefinition();
@@ -152,20 +151,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Combine(singletonRegistrationsT2.Collect())
             .Select(static (combined, _) =>
             {
+                // yuk, side effect of IncrementalValuesProvider combine
                 var ((((((((t, t1), t2), s), s1), s2), g), g1), g2) = combined;
-
-                var result = new List<ServiceRegistration>();
-                foreach (var arr in t) result.AddRange(arr);
-                foreach (var arr in t1) result.AddRange(arr);
-                foreach (var arr in t2) result.AddRange(arr);
-                foreach (var arr in s) result.AddRange(arr);
-                foreach (var arr in s1) result.AddRange(arr);
-                foreach (var arr in s2) result.AddRange(arr);
-                foreach (var arr in g) result.AddRange(arr);
-                foreach (var arr in g1) result.AddRange(arr);
-                foreach (var arr in g2) result.AddRange(arr);
-
-                return new EquatableArray<ServiceRegistration>(result);
+                return EquatableArray.Merge(t, t1, t2, s, s1, s2, g, g1, g2);
             })
             .WithTrackingName("AllServiceRegistrations");
 
@@ -176,13 +164,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Select(static (combined, _) =>
             {
                 var ((d, d1), d2) = combined;
-
-                var result = new List<DecoratorRegistration>();
-                foreach (var arr in d) result.AddRange(arr);
-                foreach (var arr in d1) result.AddRange(arr);
-                foreach (var arr in d2) result.AddRange(arr);
-
-                return new EquatableArray<DecoratorRegistration>(result);
+                return EquatableArray.Merge(d, d1, d2);
             })
             .WithTrackingName("AllDecoratorRegistrations");
 
@@ -194,17 +176,17 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Combine(methodOptions)
             .Select(static (combined, _) =>
             {
-                var ((((serviceRegs, moduleRegs), decoratorRegs), asmName), options) = combined;
+                var ((((services, modules), decorators), assemblyName), options) = combined;
 
-                var modules = moduleRegs
+                var moduleArray = modules
                     .Where(static m => m is not null)
                     .Cast<ModuleRegistration>();
 
                 return new RegistrationContext(
-                    ServiceRegistrations: serviceRegs,
-                    ModuleRegistrations: new EquatableArray<ModuleRegistration>(modules),
-                    DecoratorRegistrations: decoratorRegs,
-                    AssemblyName: asmName,
+                    ServiceRegistrations: services,
+                    ModuleRegistrations: [.. moduleArray],
+                    DecoratorRegistrations: decorators,
+                    AssemblyName: assemblyName,
                     MethodOptions: options
                 );
             })
@@ -423,7 +405,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             IsAnyKey: isAnyKey,
             Factory: factory,
             Order: order,
-            Tags: tags.ToArray(),
+            Tags: [.. tags],
             IsOpenGeneric: isOpenGeneric);
     }
 
@@ -595,12 +577,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         return new ServiceRegistration(
             Lifetime: serviceLifetime,
             ImplementationType: implementationType!,
-            ServiceTypes: serviceTypes.ToArray(),
+            ServiceTypes: [.. serviceTypes],
             ServiceKey: serviceKey,
             Factory: implementationFactory,
             Duplicate: duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
             Registration: registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
-            Tags: tags.ToArray(),
+            Tags: [.. tags],
             IsOpenGeneric: isOpenGeneric);
     }
 

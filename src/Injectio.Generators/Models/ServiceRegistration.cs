@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 using Injectio.Generators.Infrastructure;
 
 namespace Injectio.Generators.Models;

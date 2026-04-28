@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -20,6 +21,37 @@ internal static class EquatableArray
     public static EquatableArray<T> Create<T>(ReadOnlySpan<T> items)
         where T : IEquatable<T>
         => new(items.ToArray());
+
+    /// <summary>
+    /// Merges multiple <see cref="ImmutableArray{T}"/> of <see cref="EquatableArray{T}"/> into a single <see cref="EquatableArray{T}"/>.
+    /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="sources">The arrays to merge.</param>
+    /// <returns>A new <see cref="EquatableArray{T}"/> containing all items from all sources.</returns>
+    public static EquatableArray<T> Merge<T>(params ImmutableArray<EquatableArray<T>>[] sources)
+        where T : IEquatable<T>
+    {
+        var count = 0;
+        foreach (var source in sources)
+            foreach (var item in source)
+                count += item.Count;
+
+        if (count == 0)
+            return EquatableArray<T>.Empty;
+
+        var result = new T[count];
+        var offset = 0;
+        foreach (var source in sources)
+        {
+            foreach (var item in source)
+            {
+                item.AsSpan().CopyTo(result.AsSpan(offset));
+                offset += item.Count;
+            }
+        }
+
+        return new EquatableArray<T>(result);
+    }
 }
 
 /// <summary>
