@@ -141,8 +141,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .WithTrackingName("Options");
 
         // combine all service registration pipelines
-        var allServiceRegistrations = transientRegistrations
-            .Collect()
+        var allServiceRegistrations = transientRegistrations.Collect()
             .Combine(transientRegistrationsT1.Collect())
             .Combine(transientRegistrationsT2.Collect())
             .Combine(scopedRegistrations.Collect())
@@ -153,7 +152,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Combine(singletonRegistrationsT2.Collect())
             .Select(static (combined, _) =>
             {
-                var ((((((((t, t1), t2), s), s1), s2), si), si1), si2) = combined;
+                var ((((((((t, t1), t2), s), s1), s2), g), g1), g2) = combined;
+
                 var result = new List<ServiceRegistration>();
                 foreach (var arr in t) result.AddRange(arr);
                 foreach (var arr in t1) result.AddRange(arr);
@@ -161,25 +161,27 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 foreach (var arr in s) result.AddRange(arr);
                 foreach (var arr in s1) result.AddRange(arr);
                 foreach (var arr in s2) result.AddRange(arr);
-                foreach (var arr in si) result.AddRange(arr);
-                foreach (var arr in si1) result.AddRange(arr);
-                foreach (var arr in si2) result.AddRange(arr);
+                foreach (var arr in g) result.AddRange(arr);
+                foreach (var arr in g1) result.AddRange(arr);
+                foreach (var arr in g2) result.AddRange(arr);
+
                 return new EquatableArray<ServiceRegistration>(result);
             })
             .WithTrackingName("AllServiceRegistrations");
 
         // combine all decorator registration pipelines
-        var allDecoratorRegistrations = decoratorRegistrations
-            .Collect()
+        var allDecoratorRegistrations = decoratorRegistrations.Collect()
             .Combine(decoratorRegistrationsT1.Collect())
             .Combine(decoratorRegistrationsT2.Collect())
             .Select(static (combined, _) =>
             {
                 var ((d, d1), d2) = combined;
+
                 var result = new List<DecoratorRegistration>();
-                foreach (var arr in d) result.AddRange(arr.AsArray());
-                foreach (var arr in d1) result.AddRange(arr.AsArray());
-                foreach (var arr in d2) result.AddRange(arr.AsArray());
+                foreach (var arr in d) result.AddRange(arr);
+                foreach (var arr in d1) result.AddRange(arr);
+                foreach (var arr in d2) result.AddRange(arr);
+
                 return new EquatableArray<DecoratorRegistration>(result);
             })
             .WithTrackingName("AllDecoratorRegistrations");
@@ -194,9 +196,13 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             {
                 var ((((serviceRegs, moduleRegs), decoratorRegs), asmName), options) = combined;
 
+                var modules = moduleRegs
+                    .Where(static m => m is not null)
+                    .Cast<ModuleRegistration>();
+
                 return new RegistrationContext(
                     ServiceRegistrations: serviceRegs,
-                    ModuleRegistrations: new EquatableArray<ModuleRegistration>(moduleRegs.Where(static m => m is not null).Cast<ModuleRegistration>().ToList()),
+                    ModuleRegistrations: new EquatableArray<ModuleRegistration>(modules),
                     DecoratorRegistrations: decoratorRegs,
                     AssemblyName: asmName,
                     MethodOptions: options
@@ -243,8 +249,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     {
         var assembly = typeof(ServiceRegistrationGenerator).Assembly;
         var resourceName = "Injectio.Generators.Embedded." + name;
+
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
+
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
