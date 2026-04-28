@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -18,76 +19,111 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // separate pipeline per attribute, each returning its specific model
+        context.RegisterPostInitializationOutput(static ctx =>
+        {
+            ctx.AddEmbeddedAttributeDefinition();
 
+            ctx.AddSource(
+                hintName: "Injectio.Attributes.g.cs",
+                sourceText: SourceText.From(LoadEmbedded("Attributes.cs"), Encoding.UTF8)
+            );
+            ctx.AddSource(
+                hintName: "Injectio.Extensions.g.cs",
+                sourceText: SourceText.From(LoadEmbedded("Extensions.cs"), Encoding.UTF8)
+            );
+        });
+
+        // separate pipeline per attribute, each returning its specific model
         var transientRegistrations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 KnownTypes.TransientAttributeFullName,
                 predicate: static (node, _) => IsNonAbstractNonStaticType(node),
                 transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeTransientFullName))
-            .Where(static r => r is not null)
-            .Select(static (r, _) => r!)
             .WithTrackingName("TransientRegistrations");
+
+        var transientRegistrationsT1 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.TransientAttributeFullNameT1,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeTransientFullName))
+            .WithTrackingName("TransientRegistrationsT1");
+
+        var transientRegistrationsT2 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.TransientAttributeFullNameT2,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeTransientFullName))
+            .WithTrackingName("TransientRegistrationsT2");
 
         var scopedRegistrations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 KnownTypes.ScopedAttributeFullName,
                 predicate: static (node, _) => IsNonAbstractNonStaticType(node),
                 transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeScopedFullName))
-            .Where(static r => r is not null)
-            .Select(static (r, _) => r!)
             .WithTrackingName("ScopedRegistrations");
+
+        var scopedRegistrationsT1 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.ScopedAttributeFullNameT1,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeScopedFullName))
+            .WithTrackingName("ScopedRegistrationsT1");
+
+        var scopedRegistrationsT2 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.ScopedAttributeFullNameT2,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeScopedFullName))
+            .WithTrackingName("ScopedRegistrationsT2");
 
         var singletonRegistrations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 KnownTypes.SingletonAttributeFullName,
                 predicate: static (node, _) => IsNonAbstractNonStaticType(node),
                 transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeSingletonFullName))
-            .Where(static r => r is not null)
-            .Select(static (r, _) => r!)
             .WithTrackingName("SingletonRegistrations");
+
+        var singletonRegistrationsT1 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.SingletonAttributeFullNameT1,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeSingletonFullName))
+            .WithTrackingName("SingletonRegistrationsT1");
+
+        var singletonRegistrationsT2 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.SingletonAttributeFullNameT2,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformServiceRegistration(ctx, KnownTypes.ServiceLifetimeSingletonFullName))
+            .WithTrackingName("SingletonRegistrationsT2");
 
         var decoratorRegistrations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 KnownTypes.DecoratorAttributeFullName,
                 predicate: static (node, _) => IsNonAbstractNonStaticType(node),
                 transform: static (ctx, _) => TransformDecoratorRegistration(ctx))
-            .Where(static r => r is not null)
-            .Select(static (r, _) => r!)
             .WithTrackingName("DecoratorRegistrations");
+
+        var decoratorRegistrationsT1 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.DecoratorAttributeFullNameT1,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformDecoratorRegistration(ctx))
+            .WithTrackingName("DecoratorRegistrationsT1");
+
+        var decoratorRegistrationsT2 = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                KnownTypes.DecoratorAttributeFullNameT2,
+                predicate: static (node, _) => IsNonAbstractNonStaticType(node),
+                transform: static (ctx, _) => TransformDecoratorRegistration(ctx))
+            .WithTrackingName("DecoratorRegistrationsT2");
 
         var moduleRegistrations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 KnownTypes.ModuleAttributeFullName,
                 predicate: static (node, _) => node is MethodDeclarationSyntax,
                 transform: static (ctx, _) => TransformModuleRegistration(ctx))
-            .Where(static r => r is not null)
-            .Select(static (r, _) => r!)
             .WithTrackingName("ModuleRegistrations");
-
-        // combine all service registration pipelines
-        var allServiceRegistrations = transientRegistrations
-            .Collect()
-            .Combine(scopedRegistrations.Collect())
-            .SelectMany(static (pair, _) => pair.Left.AddRange(pair.Right))
-            .Collect()
-            .Combine(singletonRegistrations.Collect())
-            .SelectMany(static (pair, _) => pair.Left.AddRange(pair.Right))
-            .Collect()
-            .WithTrackingName("AllServiceRegistrations");
-
-        var allModuleRegistrations = moduleRegistrations
-            .Collect()
-            .WithTrackingName("AllModuleRegistrations");
-
-        var allDecoratorRegistrations = decoratorRegistrations
-            .Collect()
-            .WithTrackingName("AllDecoratorRegistrations");
-
-        // combine into single context
-        var registrations = allServiceRegistrations
-            .Combine(allModuleRegistrations)
-            .Combine(allDecoratorRegistrations);
 
         // include compilation options
         var assemblyName = context.CompilationProvider
@@ -104,16 +140,69 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             })
             .WithTrackingName("Options");
 
-        var options = assemblyName.Combine(methodOptions);
-        var generation = registrations
-            .Combine(options)
-            .Select(static (source, _) => new RegistrationContext(
-                ServiceRegistrations: new EquatableArray<ServiceRegistration>(source.Left.Left.Left),
-                ModuleRegistrations: new EquatableArray<ModuleRegistration>(source.Left.Left.Right),
-                DecoratorRegistrations: new EquatableArray<DecoratorRegistration>(source.Left.Right),
-                AssemblyName: source.Right.Left,
-                MethodOptions: source.Right.Right)
-            );
+        // combine all service registration pipelines
+        var allServiceRegistrations = transientRegistrations
+            .Collect()
+            .Combine(transientRegistrationsT1.Collect())
+            .Combine(transientRegistrationsT2.Collect())
+            .Combine(scopedRegistrations.Collect())
+            .Combine(scopedRegistrationsT1.Collect())
+            .Combine(scopedRegistrationsT2.Collect())
+            .Combine(singletonRegistrations.Collect())
+            .Combine(singletonRegistrationsT1.Collect())
+            .Combine(singletonRegistrationsT2.Collect())
+            .Select(static (combined, _) =>
+            {
+                var ((((((((t, t1), t2), s), s1), s2), si), si1), si2) = combined;
+                var result = new List<ServiceRegistration>();
+                foreach (var arr in t) result.AddRange(arr);
+                foreach (var arr in t1) result.AddRange(arr);
+                foreach (var arr in t2) result.AddRange(arr);
+                foreach (var arr in s) result.AddRange(arr);
+                foreach (var arr in s1) result.AddRange(arr);
+                foreach (var arr in s2) result.AddRange(arr);
+                foreach (var arr in si) result.AddRange(arr);
+                foreach (var arr in si1) result.AddRange(arr);
+                foreach (var arr in si2) result.AddRange(arr);
+                return new EquatableArray<ServiceRegistration>(result);
+            })
+            .WithTrackingName("AllServiceRegistrations");
+
+        // combine all decorator registration pipelines
+        var allDecoratorRegistrations = decoratorRegistrations
+            .Collect()
+            .Combine(decoratorRegistrationsT1.Collect())
+            .Combine(decoratorRegistrationsT2.Collect())
+            .Select(static (combined, _) =>
+            {
+                var ((d, d1), d2) = combined;
+                var result = new List<DecoratorRegistration>();
+                foreach (var arr in d) result.AddRange(arr.AsArray());
+                foreach (var arr in d1) result.AddRange(arr.AsArray());
+                foreach (var arr in d2) result.AddRange(arr.AsArray());
+                return new EquatableArray<DecoratorRegistration>(result);
+            })
+            .WithTrackingName("AllDecoratorRegistrations");
+
+        // combine all pipelines into a single generation context
+        var generation = allServiceRegistrations
+            .Combine(moduleRegistrations.Collect())
+            .Combine(allDecoratorRegistrations)
+            .Combine(assemblyName)
+            .Combine(methodOptions)
+            .Select(static (combined, _) =>
+            {
+                var ((((serviceRegs, moduleRegs), decoratorRegs), asmName), options) = combined;
+
+                return new RegistrationContext(
+                    ServiceRegistrations: serviceRegs,
+                    ModuleRegistrations: new EquatableArray<ModuleRegistration>(moduleRegs.Where(static m => m is not null).Cast<ModuleRegistration>().ToList()),
+                    DecoratorRegistrations: decoratorRegs,
+                    AssemblyName: asmName,
+                    MethodOptions: options
+                );
+            })
+            .WithTrackingName("Generation");
 
         context.RegisterSourceOutput(generation, ExecuteGeneration);
     }
@@ -147,14 +236,17 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             methodInternal);
 
         // add source file
-        sourceContext.AddSource("Injectio.Extension.g.cs", SourceText.From(result, Encoding.UTF8));
+        sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
+    }
 
-        // emit decoration helper if any decorators discovered
-        if (decoratorRegistrations.Length > 0)
-        {
-            var decorationHelper = ServiceRegistrationWriter.GenerateDecorationHelper();
-            sourceContext.AddSource("Injectio.Decoration.g.cs", SourceText.From(decorationHelper, Encoding.UTF8));
-        }
+    private static string LoadEmbedded(string name)
+    {
+        var assembly = typeof(ServiceRegistrationGenerator).Assembly;
+        var resourceName = "Injectio.Generators.Embedded." + name;
+        using var stream = assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     private static bool IsNonAbstractNonStaticType(SyntaxNode node)
@@ -165,35 +257,37 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             && !declaration.Modifiers.Any(SyntaxKind.StaticKeyword);
     }
 
-    private static ServiceRegistration? TransformServiceRegistration(GeneratorAttributeSyntaxContext context, string serviceLifetime)
+    private static EquatableArray<ServiceRegistration> TransformServiceRegistration(GeneratorAttributeSyntaxContext context, string serviceLifetime)
     {
         if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
-            return null;
+            return EquatableArray<ServiceRegistration>.Empty;
 
         // find matching attributes for this specific lifetime
+        var results = new List<ServiceRegistration>();
         foreach (var attribute in context.Attributes)
         {
             var registration = CreateServiceRegistration(classSymbol, attribute, serviceLifetime);
             if (registration is not null)
-                return registration;
+                results.Add(registration);
         }
 
-        return null;
+        return new EquatableArray<ServiceRegistration>(results);
     }
 
-    private static DecoratorRegistration? TransformDecoratorRegistration(GeneratorAttributeSyntaxContext context)
+    private static EquatableArray<DecoratorRegistration> TransformDecoratorRegistration(GeneratorAttributeSyntaxContext context)
     {
         if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
-            return null;
+            return EquatableArray<DecoratorRegistration>.Empty;
 
+        var results = new List<DecoratorRegistration>();
         foreach (var attribute in context.Attributes)
         {
             var decorator = CreateDecoratorRegistration(classSymbol, attribute);
             if (decorator is not null)
-                return decorator;
+                results.Add(decorator);
         }
 
-        return null;
+        return new EquatableArray<DecoratorRegistration>(results);
     }
 
     private static ModuleRegistration? TransformModuleRegistration(GeneratorAttributeSyntaxContext context)

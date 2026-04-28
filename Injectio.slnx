@@ -13,7 +13,6 @@
     <Project Path="tests/Injectio.Tests.Library/Injectio.Tests.Library.csproj" />
     <Project Path="tests/Injectio.Tests/Injectio.Tests.csproj" />
   </Folder>
-  <Project Path="src/Injectio.Attributes/Injectio.Attributes.csproj" />
   <Project Path="src/Injectio.Generators/Injectio.Generators.csproj" />
   <Project Path="src/Injectio.Shared/Injectio.Shared.csproj" Id="3275f391-27bc-4217-8579-2e60e6b67ede" />
 </Solution>

@@ -5,6 +5,4 @@ namespace Microsoft.CodeAnalysis;
 /// </summary>
 [global::System.AttributeUsage(global::System.AttributeTargets.All)]
 [global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-internal sealed partial class EmbeddedAttribute : global::System.Attribute
-{
-}
+internal sealed partial class EmbeddedAttribute : global::System.Attribute;

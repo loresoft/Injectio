@@ -3,7 +3,11 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <IsRoslynComponent>true</IsRoslynComponent>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
+    <PackageId>Injectio</PackageId>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <AnalyzerLanguage>cs</AnalyzerLanguage>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
   </PropertyGroup>
@@ -11,6 +15,16 @@
   <ItemGroup>
     <!-- https://learn.microsoft.com/en-us/visualstudio/extensibility/roslyn-version-support -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\Injectio.Shared\Attributes.cs" LogicalName="Injectio.Generators.Embedded.Attributes.cs" />
+    <EmbeddedResource Include="..\Injectio.Shared\Extensions.cs" LogicalName="Injectio.Generators.Embedded.Extensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" PackagePath="analyzers/dotnet/cs" Pack="true" Visible="false" />
+    <None Include="Injectio.targets" PackagePath="build/$(PackageId).targets" Pack="true" Visible="true" />
   </ItemGroup>
 
 </Project>

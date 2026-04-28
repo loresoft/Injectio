@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 using AwesomeAssertions;
 
-using Injectio.Attributes;
 using Injectio.Generators;
 
 using Microsoft.CodeAnalysis;
@@ -386,9 +385,10 @@ public class ServiceRegistrationDecoratorTests
         diagnostics.Should().BeEmpty();
     }
 
+
     private static Task Verify(string source)
     {
-        var output = GetAllGeneratedOutput<ServiceRegistrationGenerator>(source);
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
 
         return Verifier
             .Verify(output)
@@ -396,65 +396,92 @@ public class ServiceRegistrationDecoratorTests
             .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
-    private static string GetAllGeneratedOutput<T>(string source)
+    private static string GetGeneratedOutput<T>(string source)
         where T : IIncrementalGenerator, new()
     {
-        var syntaxTree = CSharpSyntaxTree.ParseText(source);
+        var parseOptions = CSharpParseOptions.Default.WithPreprocessorSymbols(
+            "NET7_0_OR_GREATER",
+            "NET8_0_OR_GREATER",
+            "NET9_0_OR_GREATER",
+            "NET10_0_OR_GREATER");
+
+        var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);
         var references = AppDomain.CurrentDomain.GetAssemblies()
             .Where(assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
             .Select(assembly => MetadataReference.CreateFromFile(assembly.Location))
-            .Concat(new[]
-            {
+            .Concat(
+            [
                 MetadataReference.CreateFromFile(typeof(T).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(RegisterServicesAttribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(IServiceCollection).Assembly.Location),
-            });
+            ]);
 
         var compilation = CSharpCompilation.Create(
             "Test.Generator",
-            new[] { syntaxTree },
+            [syntaxTree],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var originalTreeCount = compilation.SyntaxTrees.Length;
         var generator = new T();
 
-        var driver = CSharpGeneratorDriver.Create(generator);
+        var driver = CSharpGeneratorDriver.Create(
+            generators: [generator.AsSourceGenerator()],
+            parseOptions: parseOptions);
+
         driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
 
         var generated = outputCompilation.SyntaxTrees
             .Skip(originalTreeCount)
-            .Select(t => $"// {System.IO.Path.GetFileName(t.FilePath)}\n{t}")
-            .ToArray();
+            .FirstOrDefault(t => Path.GetFileName(t.FilePath) == "Injectio.g.cs");
 
-        return string.Join("\n\n// ==========\n\n", generated);
+        return generated?.ToString() ?? string.Empty;
     }
 
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
+        var attributeSource = LoadEmbeddedAttributeSource();
+
+        var attributeTree = CSharpSyntaxTree.ParseText(attributeSource,
+            CSharpParseOptions.Default.WithPreprocessorSymbols("NET7_0_OR_GREATER"),
+            path: "Injectio.Attributes.cs");
+
         var references = AppDomain.CurrentDomain.GetAssemblies()
             .Where(assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
             .Select(assembly => MetadataReference.CreateFromFile(assembly.Location))
-            .Concat(new[]
-            {
+            .Concat(
+            [
                 MetadataReference.CreateFromFile(typeof(ServiceRegistrationGenerator).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(RegisterServicesAttribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(IServiceCollection).Assembly.Location),
-            });
+            ]);
 
         var compilation = CSharpCompilation.Create(
             "Test.Diagnostics",
-            new[] { syntaxTree },
+            [syntaxTree, attributeTree],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var analyzer = new ServiceRegistrationAnalyzer();
-        var compilationWithAnalyzers = compilation.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(analyzer));
+        var compilationWithAnalyzers = compilation.WithAnalyzers([analyzer]);
         var diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
 
         return diagnostics
             .Where(d => d.Id.StartsWith("INJ"))
             .ToImmutableArray();
+    }
+
+    private static string LoadEmbeddedAttributeSource()
+    {
+        var assembly = typeof(ServiceRegistrationGenerator).Assembly;
+        using var stream = assembly.GetManifestResourceStream("Injectio.Generators.Embedded.Attributes.cs")
+            ?? throw new InvalidOperationException("Embedded Attributes.cs resource not found");
+
+        using var reader = new System.IO.StreamReader(stream);
+        var source = reader.ReadToEnd();
+
+        // Strip markers that prevent attributes from resolving in a standalone compilation
+        return source
+            .Replace("// <auto-generated />", "")
+            .Replace("[global::Microsoft.CodeAnalysis.Embedded]", "");
     }
 }

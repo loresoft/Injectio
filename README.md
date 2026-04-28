@@ -21,17 +21,15 @@ Source generator that helps register attribute marked services in the dependency
 
 ### Usage
 
+#### Requirements
+
+Requires Roslyn 4.14 or later. This means Visual Studio 2022 version 17.14+ or Visual Studio 2026+, a current Rider release, and the .NET 9.0.300 SDK or newer. Older toolchains will not load the analyzer.
+
 #### Add package
 
 Add the nuget package project to your projects.
 
 `dotnet add package Injectio`
-
-Prevent dependances from including Injectio
-
-```xml
-<PackageReference Include="Injectio" PrivateAssets="all" />
-```
 
 ### Registration Attributes
 
