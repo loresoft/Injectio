@@ -308,12 +308,13 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         bool includeInterfaces = registrationStrategy is KnownTypes.RegistrationStrategyImplementedInterfacesShortName
             or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
             or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+
         if (includeInterfaces)
         {
             foreach (var implementedInterface in classSymbol.AllInterfaces)
             {
                 // This interface is typically not injected into services and, more specifically, record types auto-implement it.
-                if (implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
+                if (SymbolHelpers.IsSystemEquatable(implementedInterface))
                     continue;
 
                 var unboundInterface = SymbolHelpers.ToUnboundGenericType(implementedInterface);
@@ -328,6 +329,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         bool includeSelf = registrationStrategy is KnownTypes.RegistrationStrategySelfShortName
             or KnownTypes.RegistrationStrategySelfWithInterfacesShortName
             or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
+
         if (includeSelf || serviceTypes.Count == 0)
             serviceTypes.Add(implementationType!);
 

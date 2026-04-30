@@ -143,6 +143,19 @@ internal static class SymbolHelpers
         };
     }
 
+    public static bool IsSystemEquatable(INamedTypeSymbol typeSymbol)
+    {
+        return typeSymbol.OriginalDefinition is
+        {
+            MetadataName: "IEquatable`1",
+            ContainingNamespace:
+            {
+                Name: "System",
+                ContainingNamespace.IsGlobalNamespace: true
+            }
+        };
+    }
+
     public static INamedTypeSymbol ToUnboundGenericType(INamedTypeSymbol typeSymbol)
     {
         if (!typeSymbol.IsGenericType || typeSymbol.IsUnboundGenericType)
