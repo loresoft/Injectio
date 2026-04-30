@@ -250,7 +250,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     private static EquatableArray<ServiceRegistration> TransformServiceRegistration(GeneratorAttributeSyntaxContext context, string serviceLifetime)
     {
         if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
-            return EquatableArray<ServiceRegistration>.Empty;
+            return [];
 
         // find matching attributes for this specific lifetime
         var results = new List<ServiceRegistration>();
@@ -267,7 +267,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     private static EquatableArray<DecoratorRegistration> TransformDecoratorRegistration(GeneratorAttributeSyntaxContext context)
     {
         if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
-            return EquatableArray<DecoratorRegistration>.Empty;
+            return [];
 
         var results = new List<DecoratorRegistration>();
         foreach (var attribute in context.Attributes)
@@ -412,7 +412,6 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     private static (bool isValid, bool hasTagCollection) ValidateMethod(IMethodSymbol methodSymbol)
     {
         var hasServiceCollection = false;
-        var hasTagCollection = false;
 
         // validate first parameter should be service collection
         if (methodSymbol.Parameters.Length is 1 or 2)
@@ -428,7 +427,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (methodSymbol.Parameters.Length is 2)
         {
             var parameterSymbol = methodSymbol.Parameters[1];
-            hasTagCollection = SymbolHelpers.IsStringCollection(parameterSymbol);
+            bool hasTagCollection = SymbolHelpers.IsStringCollection(parameterSymbol);
 
             // to be valid, parameter 0 must be service collection and parameter 1 must be string collection,
             return (hasServiceCollection && hasTagCollection, hasTagCollection);

@@ -151,12 +151,26 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             ? classSymbol.Locations[0]
             : Location.None;
 
+        // Lazily compute assignable service types only when validation needs them.
+        INamedTypeSymbol? assignableServiceTypeSymbol = null;
+        HashSet<ITypeSymbol>? assignableServiceTypes = null;
+
+        // Reuse the same type hierarchy walk across multiple attributes with the same implementation type.
+        HashSet<ITypeSymbol> GetAssignableServiceTypesForType(INamedTypeSymbol typeSymbol)
+        {
+            if (assignableServiceTypeSymbol is not null && SymbolEqualityComparer.Default.Equals(assignableServiceTypeSymbol, typeSymbol))
+                return assignableServiceTypes!;
+
+            assignableServiceTypeSymbol = typeSymbol;
+            return GetAssignableServiceTypes(typeSymbol);
+        }
+
         foreach (var attribute in attributes)
         {
             if (SymbolHelpers.IsDecoratorAttribute(attribute))
-                AnalyzeDecoratorAttribute(context, classSymbol, attribute, location);
+                AnalyzeDecoratorAttribute(context, classSymbol, attribute, location, GetAssignableServiceTypesForType);
             else if (SymbolHelpers.IsKnownAttribute(attribute, out _))
-                AnalyzeRegistrationAttribute(context, classSymbol, attribute, location);
+                AnalyzeRegistrationAttribute(context, classSymbol, attribute, location, GetAssignableServiceTypesForType);
         }
     }
 
@@ -164,7 +178,8 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         SymbolAnalysisContext context,
         INamedTypeSymbol classSymbol,
         AttributeData attribute,
-        Location location)
+        Location location,
+        Func<INamedTypeSymbol, HashSet<ITypeSymbol>> getAssignableServiceTypes)
     {
         ITypeSymbol? serviceTypeSymbol = null;
         string? factory = null;
@@ -219,7 +234,7 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         // INJ0010 — class does not implement service
         if (!SymbolEqualityComparer.Default.Equals(serviceTypeSymbol, classSymbol))
         {
-            var assignableTypes = GetAssignableServiceTypes(classSymbol);
+            var assignableTypes = getAssignableServiceTypes(classSymbol);
             var implementsService = ContainsServiceType(assignableTypes, serviceTypeSymbol);
 
             if (!implementsService)
@@ -252,10 +267,7 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
                 foreach (var param in ctor.Parameters)
                 {
-                    var parameterTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-                    AddAssignableServiceType(parameterTypes, param.Type);
-
-                    if (ContainsServiceType(parameterTypes, serviceTypeSymbol))
+                    if (IsAssignableServiceType(param.Type, serviceTypeSymbol))
                     {
                         hasCompatibleCtor = true;
                         break;
@@ -288,30 +300,16 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         Location location)
     {
         var members = classSymbol.GetMembers(factoryMethodName);
-        var factoryMethods = new List<IMethodSymbol>();
+        var hasFactoryMethod = false;
+        var expectedParamCount = isKeyed ? 3 : 2;
 
         foreach (var member in members)
         {
-            if (member is IMethodSymbol method)
-                factoryMethods.Add(method);
-        }
+            if (member is not IMethodSymbol method)
+                continue;
 
-        if (factoryMethods.Count == 0)
-        {
-            Diagnostic diagnostic = Diagnostic.Create(
-                DiagnosticDescriptors.DecoratorFactoryNotFound,
-                location,
-                factoryMethodName,
-                classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+            hasFactoryMethod = true;
 
-            context.ReportDiagnostic(diagnostic);
-            return;
-        }
-
-        var expectedParamCount = isKeyed ? 3 : 2;
-
-        foreach (var method in factoryMethods)
-        {
             if (!method.IsStatic)
                 continue;
 
@@ -325,13 +323,22 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
                 continue;
 
             var innerParameter = method.Parameters[expectedParamCount - 1];
-            var parameterTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
-            AddAssignableServiceType(parameterTypes, innerParameter.Type);
-
-            if (!ContainsServiceType(parameterTypes, serviceTypeSymbol))
+            if (!IsAssignableServiceType(innerParameter.Type, serviceTypeSymbol))
                 continue;
 
             return; // valid overload found
+        }
+
+        if (!hasFactoryMethod)
+        {
+            Diagnostic diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.DecoratorFactoryNotFound,
+                location,
+                factoryMethodName,
+                classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+
+            context.ReportDiagnostic(diagnostic);
+            return;
         }
 
         Diagnostic invalidSignature = Diagnostic.Create(
@@ -347,7 +354,8 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         SymbolAnalysisContext context,
         INamedTypeSymbol classSymbol,
         AttributeData attribute,
-        Location location)
+        Location location,
+        Func<INamedTypeSymbol, HashSet<ITypeSymbol>> getAssignableServiceTypes)
     {
         var serviceTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
 
@@ -455,7 +463,7 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
         // validate service type assignability (skip when a factory is specified, as the factory produces the service)
         if (implementationFactory.IsNullOrWhiteSpace())
-            ValidateServiceTypes(context, effectiveTypeSymbol, serviceTypes, location);
+            ValidateServiceTypes(context, effectiveTypeSymbol, serviceTypes, location, getAssignableServiceTypes);
     }
 
     private static void ValidateFactoryMethod(
@@ -520,9 +528,10 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         SymbolAnalysisContext context,
         INamedTypeSymbol classSymbol,
         HashSet<ITypeSymbol> serviceTypes,
-        Location location)
+        Location location,
+        Func<INamedTypeSymbol, HashSet<ITypeSymbol>> getAssignableServiceTypes)
     {
-        var assignableTypes = GetAssignableServiceTypes(classSymbol);
+        var assignableTypes = getAssignableServiceTypes(classSymbol);
 
         foreach (var serviceType in serviceTypes)
         {
@@ -598,6 +607,25 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         return serviceType is INamedTypeSymbol serviceNamedType
             && GetOpenGenericDefinition(serviceNamedType) is { } openGenericDefinition
             && assignableTypes.Contains(openGenericDefinition);
+    }
+
+    private static bool IsAssignableServiceType(
+        ITypeSymbol assignableType,
+        ITypeSymbol serviceType)
+    {
+        if (SymbolEqualityComparer.Default.Equals(assignableType, serviceType))
+            return true;
+
+        if (assignableType is not INamedTypeSymbol assignableNamedType)
+            return false;
+
+        var assignableOpenGenericDefinition = GetOpenGenericDefinition(assignableNamedType);
+        if (assignableOpenGenericDefinition is null)
+            return false;
+
+        return serviceType is INamedTypeSymbol serviceNamedType
+            && GetOpenGenericDefinition(serviceNamedType) is { } serviceOpenGenericDefinition
+            && SymbolEqualityComparer.Default.Equals(assignableOpenGenericDefinition, serviceOpenGenericDefinition);
     }
 
     private static INamedTypeSymbol? GetOpenGenericDefinition(INamedTypeSymbol typeSymbol)
