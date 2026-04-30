@@ -19,5 +19,3 @@ INJ0011 | Usage    | Warning  | Decorator is missing service type
 INJ0012 | Usage    | Warning  | Decorator has no constructor accepting the inner service
 INJ0013 | Usage    | Warning  | Decorator factory method not found
 INJ0014 | Usage    | Warning  | Decorator factory method has invalid signature
-INJ0015 | Usage    | Warning  | Keyed decoration is not supported for open-generic services
-INJ0016 | Usage    | Warning  | Decorator target service is not registered in this compilation

@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Threading.Tasks;
 
 using AwesomeAssertions;
 
@@ -11,10 +8,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-
-using VerifyXunit;
-
-using Xunit;
 
 namespace Injectio.Tests;
 
@@ -314,51 +307,6 @@ public class ServiceRegistrationDecoratorTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
         diagnostics.Should().Contain(d => d.Id == "INJ0014");
-    }
-
-    [Fact]
-    public async Task DiagnoseDecoratorOpenGenericKeyed()
-    {
-        const string source = """
-            using Injectio.Attributes;
-
-            namespace Injectio.Sample;
-
-            public interface IRepo<T> { }
-
-            [RegisterSingleton(ServiceType = typeof(IRepo<>), ImplementationType = typeof(Repo<>))]
-            public class Repo<T> : IRepo<T> { }
-
-            [RegisterDecorator(ServiceType = typeof(IRepo<>), ServiceKey = "X")]
-            public class LoggingRepo<T> : IRepo<T>
-            {
-                public LoggingRepo(IRepo<T> inner) { }
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().Contain(d => d.Id == "INJ0015");
-    }
-
-    [Fact]
-    public async Task DiagnoseDecoratorTargetNotRegistered()
-    {
-        const string source = """
-            using Injectio.Attributes;
-
-            namespace Injectio.Sample;
-
-            public interface IService { }
-
-            [RegisterDecorator<IService>]
-            public class LoggingDecorator : IService
-            {
-                public LoggingDecorator(IService inner) { }
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().Contain(d => d.Id == "INJ0016");
     }
 
     [Fact]

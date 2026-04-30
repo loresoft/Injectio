@@ -131,24 +131,4 @@ public static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
-
-    public static readonly DiagnosticDescriptor DecoratorOpenGenericKeyed = new(
-        id: "INJ0015",
-        title: "Keyed decoration is not supported for open-generic services",
-        messageFormat: "Decorator '{0}' targets open-generic service '{1}' and cannot be used with ServiceKey or AnyKey",
-        category: Category,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        customTags: [WellKnownDiagnosticTags.CompilationEnd]
-    );
-
-    public static readonly DiagnosticDescriptor DecoratorTargetNotRegistered = new(
-        id: "INJ0016",
-        title: "Decorator target service is not registered in this compilation",
-        messageFormat: "Decorator '{0}' targets service '{1}' but no matching registration was found; decoration will be skipped at runtime if the service is not registered elsewhere",
-        category: Category,
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true,
-        customTags: [WellKnownDiagnosticTags.CompilationEnd]
-    );
 }
