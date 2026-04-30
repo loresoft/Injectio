@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -15,6 +16,8 @@ namespace Injectio.Generators;
 [Generator]
 public class ServiceRegistrationGenerator : IIncrementalGenerator
 {
+    private static readonly Regex NonWordRegex = new("\\W", RegexOptions.Compiled);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // add embedded attributes and extensions as additional files to compilation
@@ -178,13 +181,9 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             {
                 var ((((services, modules), decorators), assemblyName), options) = combined;
 
-                var moduleArray = modules
-                    .Where(static m => m is not null)
-                    .Cast<ModuleRegistration>();
-
                 return new RegistrationContext(
                     ServiceRegistrations: services,
-                    ModuleRegistrations: [.. moduleArray],
+                    ModuleRegistrations: CreateModuleRegistrations(modules),
                     DecoratorRegistrations: decorators,
                     AssemblyName: assemblyName,
                     MethodOptions: options
@@ -201,16 +200,19 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
         var moduleRegistrations = source.ModuleRegistrations.AsArray();
 
-        var decoratorRegistrations = source.DecoratorRegistrations
-            .OrderBy(m => m.ServiceType, StringComparer.Ordinal)
-            .ThenBy(m => m.Order)
-            .ThenBy(m => m.DecoratorType, StringComparer.Ordinal)
-            .ToArray();
+        var decoratorRegistrations = source.DecoratorRegistrations.AsArray();
+        if (decoratorRegistrations.Length > 1)
+        {
+            // clone and sort decorator registrations by service type, then order, then decorator type to ensure consistent generation order
+            // note: we clone to avoid mutating the original array which may be shared across multiple generation runs
+            decoratorRegistrations = (DecoratorRegistration[])decoratorRegistrations.Clone();
+            Array.Sort(decoratorRegistrations, CompareDecoratorRegistrations);
+        }
 
         // compute extension method name
         var methodName = source.MethodOptions?.Name;
         if (methodName.IsNullOrWhiteSpace())
-            methodName = Regex.Replace(source.AssemblyName ?? string.Empty, "\\W", "");
+            methodName = NonWordRegex.Replace(source.AssemblyName ?? string.Empty, "");
 
         var methodInternal = source.MethodOptions?.Internal;
 
@@ -349,6 +351,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     {
                         serviceType = value.ToString();
                     }
+
                     break;
                 case "ImplementationType":
                     if (value is INamedTypeSymbol implSymbol)
@@ -360,6 +363,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     {
                         implementationType = value.ToString();
                     }
+
                     break;
                 case "ServiceKey":
                     serviceKey = parameter.Value.ToCSharpString();
@@ -367,6 +371,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 case "AnyKey":
                     if (value is bool anyKey)
                         isAnyKey = anyKey;
+
                     break;
                 case "Factory":
                     factory = value?.ToString();
@@ -374,16 +379,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                 case "Order":
                     if (value is int orderValue)
                         order = orderValue;
+
                     break;
                 case "Tags":
-                    if (value is string tagsText)
-                    {
-                        foreach (var tag in tagsText.Split(',', ';'))
-                        {
-                            if (tag.HasValue())
-                                tags.Add(tag.Trim());
-                        }
-                    }
+                    AddTags(tags, value as string);
                     break;
             }
         }
@@ -487,6 +486,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
 
                     var serviceType = serviceTypeSymbol?.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat) ?? value.ToString();
                     serviceTypes.Add(serviceType);
+
                     break;
                 case "ServiceKey":
                     serviceKey = parameter.Value.ToCSharpString();
@@ -496,6 +496,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     isOpenGeneric = isOpenGeneric || IsOpenGeneric(implementationTypeSymbol);
 
                     implementationType = implementationTypeSymbol?.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat) ?? value.ToString();
+
                     break;
                 case "Factory":
                     implementationFactory = value.ToString();
@@ -507,14 +508,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     registrationStrategy = SymbolHelpers.ResolveRegistrationStrategy(value);
                     break;
                 case "Tags":
-                    var tagsItems = value
-                        .ToString()
-                        .Split(',', ';')
-                        .Where(v => v.HasValue());
-
-                    foreach (var tagItem in tagsItems)
-                        tags.Add(tagItem);
-
+                    AddTags(tags, value.ToString());
                     break;
             }
         }
@@ -610,5 +604,75 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             string text => text,
             _ => KnownTypes.DuplicateStrategySkipShortName
         };
+    }
+
+    private static EquatableArray<ModuleRegistration> CreateModuleRegistrations(ImmutableArray<ModuleRegistration?> modules)
+    {
+        var count = 0;
+        foreach (var module in modules)
+        {
+            if (module is not null)
+                count++;
+        }
+
+        if (count == 0)
+            return EquatableArray<ModuleRegistration>.Empty;
+
+        var result = new ModuleRegistration[count];
+        var index = 0;
+        foreach (var module in modules)
+        {
+            if (module is not null)
+                result[index++] = module;
+        }
+
+        return new EquatableArray<ModuleRegistration>(result);
+    }
+
+    private static int CompareDecoratorRegistrations(DecoratorRegistration? left, DecoratorRegistration? right)
+    {
+        if (ReferenceEquals(left, right))
+            return 0;
+
+        if (left is null)
+            return -1;
+
+        if (right is null)
+            return 1;
+
+        var result = string.Compare(left.ServiceType, right.ServiceType, StringComparison.Ordinal);
+        if (result != 0)
+            return result;
+
+        result = left.Order.CompareTo(right.Order);
+        if (result != 0)
+            return result;
+
+        return string.Compare(left.DecoratorType, right.DecoratorType, StringComparison.Ordinal);
+    }
+
+    private static void AddTags(HashSet<string> tags, string? tagsText)
+    {
+        if (string.IsNullOrEmpty(tagsText))
+            return;
+
+        var tagsSpan = tagsText.AsSpan();
+        var start = 0;
+
+        for (var index = 0; index <= tagsSpan.Length; index++)
+        {
+            if (index < tagsSpan.Length && tagsSpan[index] != ',' && tagsSpan[index] != ';')
+                continue;
+
+            var length = index - start;
+            if (length > 0)
+            {
+                var tag = tagsSpan.Slice(start, length).Trim();
+                if (!tag.IsEmpty)
+                    tags.Add(tag.ToString());
+            }
+
+            start = index + 1;
+        }
     }
 }

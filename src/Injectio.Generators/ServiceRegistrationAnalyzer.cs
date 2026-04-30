@@ -161,8 +161,12 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             if (assignableServiceTypeSymbol is not null && SymbolEqualityComparer.Default.Equals(assignableServiceTypeSymbol, typeSymbol))
                 return assignableServiceTypes!;
 
+            // compute assignable service types for the given type symbol
+            // cache the result for subsequent lookups with the same type symbol
             assignableServiceTypeSymbol = typeSymbol;
-            return GetAssignableServiceTypes(typeSymbol);
+            assignableServiceTypes = GetAssignableServiceTypes(typeSymbol);
+
+            return assignableServiceTypes;
         }
 
         foreach (var attribute in attributes)

@@ -362,6 +362,31 @@ public class ServiceRegistrationDiagnosticTests
     }
 
     [Fact]
+    public async Task NoAnalyzerExceptionForMultipleRegistrationsOnSameType()
+    {
+        const string source = """
+
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterSingleton(ServiceType = typeof(IService))]
+            [RegisterTransient(ServiceType = typeof(IService))]
+            public class MyService : IService
+            {
+            }
+
+            """;
+
+        var diagnostics = await GetAllAnalyzerDiagnosticsAsync(source);
+
+        diagnostics.Should().NotContain(d => d.Id == "AD0001");
+        diagnostics.Where(d => d.Id.StartsWith("INJ")).Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task NoDiagnosticsForValidFactory()
     {
         const string source = """
@@ -470,6 +495,16 @@ public class ServiceRegistrationDiagnosticTests
 
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
     {
+        var diagnostics = await GetAllAnalyzerDiagnosticsAsync(source);
+
+        // return only Injectio diagnostics
+        return diagnostics
+            .Where(d => d.Id.StartsWith("INJ"))
+            .ToImmutableArray();
+    }
+
+    private static async Task<ImmutableArray<Diagnostic>> GetAllAnalyzerDiagnosticsAsync(string source)
+    {
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
         var attributeSource = LoadEmbeddedAttributeSource();
 
@@ -494,12 +529,7 @@ public class ServiceRegistrationDiagnosticTests
 
         var analyzer = new ServiceRegistrationAnalyzer();
         var compilationWithAnalyzers = compilation.WithAnalyzers([analyzer]);
-        var diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
-
-        // return only Injectio diagnostics
-        return diagnostics
-            .Where(d => d.Id.StartsWith("INJ"))
-            .ToImmutableArray();
+        return await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
     }
 
     private static string LoadEmbeddedAttributeSource()
