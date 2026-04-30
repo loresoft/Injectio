@@ -211,6 +211,33 @@ public class ServiceRegistrationDiagnosticTests
     }
 
     [Fact]
+    public async Task NoDiagnosticsForServiceTypeWithImplementationType()
+    {
+        const string source = """
+
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            public class MyService : IService
+            {
+            }
+
+            [RegisterTransient(ServiceType = typeof(IService), ImplementationType = typeof(MyService))]
+            public class Registrations
+            {
+            }
+
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task DiagnoseRegisterServicesOnAbstractClassNonStaticMethod()
     {
         const string source = """
