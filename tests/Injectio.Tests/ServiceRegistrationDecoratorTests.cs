@@ -310,6 +310,62 @@ public class ServiceRegistrationDecoratorTests
     }
 
     [Fact]
+    public async Task DiagnoseDecoratorFactoryInvalidInnerParameter()
+    {
+        const string source = """
+            using System;
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+            public interface IOther { }
+
+            [RegisterSingleton]
+            public class Service : IService { }
+
+            [RegisterDecorator<IService>(Factory = nameof(Create))]
+            public class LoggingDecorator : IService
+            {
+                public LoggingDecorator(IService inner) { }
+
+                public static IService Create(IServiceProvider serviceProvider, IOther inner) => new LoggingDecorator(new Service());
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        diagnostics.Should().Contain(d => d.Id == "INJ0014");
+    }
+
+    [Fact]
+    public async Task DiagnoseDecoratorKeyedFactoryInvalidInnerParameter()
+    {
+        const string source = """
+            using System;
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+            public interface IOther { }
+
+            [RegisterSingleton<IService>(ServiceKey = "Alpha")]
+            public class Service : IService { }
+
+            [RegisterDecorator<IService>(ServiceKey = "Alpha", Factory = nameof(Create))]
+            public class LoggingDecorator : IService
+            {
+                public LoggingDecorator(IService inner) { }
+
+                public static IService Create(IServiceProvider serviceProvider, object? serviceKey, IOther inner) => new LoggingDecorator(new Service());
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        diagnostics.Should().Contain(d => d.Id == "INJ0014");
+    }
+
+    [Fact]
     public async Task NoDiagnosticForValidDecorator()
     {
         const string source = """
