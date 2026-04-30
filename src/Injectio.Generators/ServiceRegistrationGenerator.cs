@@ -549,7 +549,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             foreach (var implementedInterface in classSymbol.AllInterfaces)
             {
                 // This interface is typically not injected into services and, more specifically, record types auto-implement it.
-                if (implementedInterface.ConstructedFrom.ToString() == "System.IEquatable<T>")
+                if (SymbolHelpers.IsSystemEquatable(implementedInterface))
                     continue;
 
                 var unboundInterface = SymbolHelpers.ToUnboundGenericType(implementedInterface);

@@ -43,6 +43,9 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             return;
 
         var attributes = methodSymbol.GetAttributes();
+        if (attributes.Length == 0)
+            return;
+
         var isKnown = false;
 
         foreach (var attribute in attributes)
@@ -64,34 +67,43 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         // warn if non-static method on abstract class
         if (!methodSymbol.IsStatic && methodSymbol.ContainingType.IsAbstract)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostic diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.RegisterServicesMethodOnAbstractClass,
                 location,
                 methodSymbol.Name,
-                methodSymbol.ContainingType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat)));
+                methodSymbol.ContainingType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+
+            context.ReportDiagnostic(diagnostic);
         }
 
         ValidateMethod(context, methodSymbol, location);
     }
 
-    private static void ValidateMethod(SymbolAnalysisContext context, IMethodSymbol methodSymbol, Location location)
+    private static void ValidateMethod(
+        SymbolAnalysisContext context,
+        IMethodSymbol methodSymbol,
+        Location location)
     {
         if (methodSymbol.Parameters.Length > 2)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostic diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.MethodTooManyParameters,
                 location,
                 methodSymbol.Name,
-                methodSymbol.Parameters.Length.ToString()));
+                methodSymbol.Parameters.Length.ToString());
+
+            context.ReportDiagnostic(diagnostic);
             return;
         }
 
         if (methodSymbol.Parameters.Length == 0)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostic diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.InvalidMethodSignature,
                 location,
-                methodSymbol.Name));
+                methodSymbol.Name);
+
+            context.ReportDiagnostic(diagnostic);
             return;
         }
 
@@ -99,24 +111,27 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
         if (!hasServiceCollection)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostic diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.InvalidMethodSignature,
                 location,
-                methodSymbol.Name));
+                methodSymbol.Name);
+
+            context.ReportDiagnostic(diagnostic);
             return;
         }
 
-        if (methodSymbol.Parameters.Length == 2)
-        {
-            var hasTagCollection = SymbolHelpers.IsStringCollection(methodSymbol.Parameters[1]);
+        if (methodSymbol.Parameters.Length != 2)
+            return;
 
-            if (!hasTagCollection)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.InvalidMethodSecondParameter,
-                    location,
-                    methodSymbol.Name));
-            }
+        var hasTagCollection = SymbolHelpers.IsStringCollection(methodSymbol.Parameters[1]);
+        if (!hasTagCollection)
+        {
+            Diagnostic diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.InvalidMethodSecondParameter,
+                location,
+                methodSymbol.Name);
+
+            context.ReportDiagnostic(diagnostic);
         }
     }
 
@@ -129,10 +144,17 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             return;
 
         var attributes = classSymbol.GetAttributes();
+        if (attributes.Length == 0)
+            return;
+
+        Location? location = null;
 
         foreach (var attribute in attributes)
         {
-            var location = classSymbol.Locations.Length > 0
+            if (!SymbolHelpers.IsKnownAttribute(attribute, out _))
+                continue;
+
+            location ??= classSymbol.Locations.Length > 0
                 ? classSymbol.Locations[0]
                 : Location.None;
 
@@ -381,8 +403,10 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         AttributeData attribute,
         Location location)
     {
-        var serviceTypes = new HashSet<string>();
-        string? implementationType = null;
+        var serviceTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+        INamedTypeSymbol? implementationTypeSymbol = null;
+        ITypeSymbol? implementationType = null;
         string? implementationFactory = null;
         string? registrationStrategy = null;
 
@@ -396,11 +420,12 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
                 if (typeParameter.Name == "TService" || index == 0)
                 {
-                    serviceTypes.Add(typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+                    serviceTypes.Add(typeArgument);
                 }
                 else if (typeParameter.Name == "TImplementation" || index == 1)
                 {
-                    implementationType = typeArgument.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+                    implementationTypeSymbol = typeArgument as INamedTypeSymbol;
+                    implementationType = typeArgument;
                 }
             }
         }
@@ -416,27 +441,29 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             switch (name)
             {
                 case "ServiceType":
-                    var serviceTypeSymbol = value as INamedTypeSymbol;
-                    var serviceType = serviceTypeSymbol?.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat) ?? value.ToString();
-                    serviceTypes.Add(serviceType);
+                    if (value is ITypeSymbol serviceTypeSymbol)
+                        serviceTypes.Add(serviceTypeSymbol);
+
                     break;
                 case "ImplementationType":
                     var implSymbol = value as INamedTypeSymbol;
-                    implementationType = implSymbol?.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat) ?? value.ToString();
+                    implementationTypeSymbol = implSymbol;
+                    implementationType = implSymbol;
+
                     break;
                 case "Factory":
                     implementationFactory = value.ToString();
+
                     break;
                 case "Registration":
                     registrationStrategy = SymbolHelpers.ResolveRegistrationStrategy(value);
+
                     break;
             }
         }
 
         // resolve effective implementation type
-        var implTypeName = implementationType.IsNullOrWhiteSpace()
-            ? classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat)
-            : implementationType!;
+        var effectiveTypeSymbol = implementationTypeSymbol ?? classSymbol;
 
         // determine effective registration strategy
         if (registrationStrategy == null && implementationType == null && serviceTypes.Count == 0)
@@ -449,12 +476,12 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
 
         if (includeInterfaces)
         {
-            foreach (var iface in classSymbol.AllInterfaces)
+            foreach (var interfaceSymbol in effectiveTypeSymbol.AllInterfaces)
             {
-                if (iface.ConstructedFrom.ToString() == "System.IEquatable<T>")
+                if (SymbolHelpers.IsSystemEquatable(interfaceSymbol))
                     continue;
 
-                serviceTypes.Add(iface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+                serviceTypes.Add(interfaceSymbol);
             }
         }
 
@@ -463,26 +490,26 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             or KnownTypes.RegistrationStrategySelfWithProxyFactoryShortName;
 
         if (includeSelf || serviceTypes.Count == 0)
-            serviceTypes.Add(implTypeName);
+            serviceTypes.Add(effectiveTypeSymbol);
 
         // validate abstract implementation type without factory
-        if (classSymbol.IsAbstract && implementationFactory.IsNullOrWhiteSpace() && implTypeName == classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat))
+        if (classSymbol.IsAbstract && implementationFactory.IsNullOrWhiteSpace() && SymbolEqualityComparer.Default.Equals(effectiveTypeSymbol, classSymbol))
         {
-            context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostic diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.AbstractImplementationType,
                 location,
-                implTypeName));
+                effectiveTypeSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+
+            context.ReportDiagnostic(diagnostic);
         }
 
         // validate factory method
         if (implementationFactory.HasValue())
-        {
             ValidateFactoryMethod(context, classSymbol, implementationFactory!, location);
-        }
 
         // validate service type assignability (skip when a factory is specified, as the factory produces the service)
         if (implementationFactory.IsNullOrWhiteSpace())
-            ValidateServiceTypes(context, classSymbol, serviceTypes, location);
+            ValidateServiceTypes(context, effectiveTypeSymbol, serviceTypes, location);
     }
 
     private static void ValidateFactoryMethod(
@@ -491,34 +518,17 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
         string factoryMethodName,
         Location location)
     {
-        var className = classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
         var members = classSymbol.GetMembers(factoryMethodName);
-        var factoryMethods = new List<IMethodSymbol>();
+        var hasFactoryMethod = false;
+        var hasStaticOverload = false;
 
         foreach (var member in members)
         {
-            if (member is IMethodSymbol method)
-                factoryMethods.Add(method);
-        }
+            if (member is not IMethodSymbol method)
+                continue;
 
-        if (factoryMethods.Count == 0)
-        {
-            Diagnostic diagnostic = Diagnostic.Create(
-                DiagnosticDescriptors.FactoryMethodNotFound,
-                location,
-                factoryMethodName,
-                className);
+            hasFactoryMethod = true;
 
-            context.ReportDiagnostic(diagnostic);
-
-            return;
-        }
-
-        // find at least one valid overload; only report if none exist
-        var hasStaticOverload = false;
-
-        foreach (var method in factoryMethods)
-        {
             if (!method.IsStatic)
                 continue;
 
@@ -531,11 +541,23 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
                 continue;
 
             // validate second parameter is object? (for keyed services)
-            if (method.Parameters.Length == 2
-                && method.Parameters[1].Type.SpecialType != SpecialType.System_Object)
+            if (method.Parameters.Length == 2 && method.Parameters[1].Type.SpecialType != SpecialType.System_Object)
                 continue;
 
             // found a valid overload
+            return;
+        }
+
+        if (!hasFactoryMethod)
+        {
+            Diagnostic diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.FactoryMethodNotFound,
+                location,
+                factoryMethodName,
+                classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
+
+            context.ReportDiagnostic(diagnostic);
+
             return;
         }
 
@@ -543,7 +565,7 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             hasStaticOverload ? DiagnosticDescriptors.FactoryMethodInvalidSignature : DiagnosticDescriptors.FactoryMethodNotStatic,
             location,
             factoryMethodName,
-            className);
+            classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
 
         context.ReportDiagnostic(invalidSignature);
     }
@@ -551,77 +573,98 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
     private static void ValidateServiceTypes(
         SymbolAnalysisContext context,
         INamedTypeSymbol classSymbol,
-        HashSet<string> serviceTypes,
+        HashSet<ITypeSymbol> serviceTypes,
         Location location)
     {
-        var implTypeName = classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
+        var assignableTypes = GetAssignableServiceTypes(classSymbol);
 
         foreach (var serviceType in serviceTypes)
         {
-            if (serviceType == implTypeName)
+            if (SymbolEqualityComparer.Default.Equals(serviceType, classSymbol))
                 continue;
 
-            var implementsService = false;
+            if (ContainsServiceType(assignableTypes, serviceType))
+                continue;
 
-            foreach (var iface in classSymbol.AllInterfaces)
-            {
-                var ifaceName = iface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
-                if (ifaceName == serviceType)
-                {
-                    implementsService = true;
-                    break;
-                }
+            Diagnostic diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.ServiceTypeMismatch,
+                location,
+                classSymbol.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat),
+                serviceType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat));
 
-                // also check unbound generic form (e.g. IOpenGeneric<> vs IOpenGeneric<T>)
-                var unboundIface = SymbolHelpers.ToUnboundGenericType(iface);
-                if (!SymbolEqualityComparer.Default.Equals(unboundIface, iface))
-                {
-                    var unboundName = unboundIface.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
-                    if (unboundName == serviceType)
-                    {
-                        implementsService = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!implementsService)
-            {
-                var baseType = classSymbol.BaseType;
-                while (baseType is not null)
-                {
-                    var baseName = baseType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
-                    if (baseName == serviceType)
-                    {
-                        implementsService = true;
-                        break;
-                    }
-
-                    var unboundBase = SymbolHelpers.ToUnboundGenericType(baseType);
-                    if (!SymbolEqualityComparer.Default.Equals(unboundBase, baseType))
-                    {
-                        var unboundBaseName = unboundBase.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat);
-                        if (unboundBaseName == serviceType)
-                        {
-                            implementsService = true;
-                            break;
-                        }
-                    }
-
-                    baseType = baseType.BaseType;
-                }
-            }
-
-            if (!implementsService)
-            {
-                Diagnostic diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.ServiceTypeMismatch,
-                    location,
-                    implTypeName,
-                    serviceType);
-
-                context.ReportDiagnostic(diagnostic);
-            }
+            context.ReportDiagnostic(diagnostic);
         }
+    }
+
+    private static HashSet<ITypeSymbol> GetAssignableServiceTypes(INamedTypeSymbol classSymbol)
+    {
+        var assignableTypes = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
+        AddAssignableServiceTypes(assignableTypes, classSymbol);
+
+        if (classSymbol.IsUnboundGenericType)
+            AddAssignableServiceTypes(assignableTypes, classSymbol.OriginalDefinition);
+
+        return assignableTypes;
+    }
+
+    private static void AddAssignableServiceTypes(
+        HashSet<ITypeSymbol> assignableTypes,
+        INamedTypeSymbol classSymbol,
+        bool includeSelf = false)
+    {
+        if (includeSelf)
+            AddAssignableServiceType(assignableTypes, classSymbol);
+
+        foreach (var iface in classSymbol.AllInterfaces)
+            AddAssignableServiceType(assignableTypes, iface);
+
+        var baseType = classSymbol.BaseType;
+        while (baseType is not null)
+        {
+            AddAssignableServiceType(assignableTypes, baseType);
+
+            baseType = baseType.BaseType;
+        }
+    }
+
+    private static void AddAssignableServiceType(
+        HashSet<ITypeSymbol> assignableTypes,
+        INamedTypeSymbol typeSymbol)
+    {
+        assignableTypes.Add(typeSymbol);
+
+        var openGenericDefinition = GetOpenGenericDefinition(typeSymbol);
+        if (openGenericDefinition is not null)
+            assignableTypes.Add(openGenericDefinition);
+    }
+
+    private static bool ContainsServiceType(
+        HashSet<ITypeSymbol> assignableTypes,
+        ITypeSymbol serviceType)
+    {
+        if (assignableTypes.Contains(serviceType))
+            return true;
+
+        return serviceType is INamedTypeSymbol serviceNamedType
+            && GetOpenGenericDefinition(serviceNamedType) is { } openGenericDefinition
+            && assignableTypes.Contains(openGenericDefinition);
+    }
+
+    private static INamedTypeSymbol? GetOpenGenericDefinition(INamedTypeSymbol typeSymbol)
+    {
+        if (!typeSymbol.IsGenericType)
+            return null;
+
+        if (typeSymbol.IsUnboundGenericType)
+            return typeSymbol.OriginalDefinition;
+
+        foreach (var typeArgument in typeSymbol.TypeArguments)
+        {
+            if (typeArgument.TypeKind != TypeKind.TypeParameter)
+                return null;
+        }
+
+        return typeSymbol.OriginalDefinition;
     }
 }
