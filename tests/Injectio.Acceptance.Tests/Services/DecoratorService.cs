@@ -1,5 +1,7 @@
 using Injectio.Attributes;
 
+using Microsoft.Extensions.Logging;
+
 namespace Injectio.Acceptance.Tests.Services;
 
 public interface IGreeter
@@ -54,6 +56,102 @@ public class LoggingRepo<T> : IRepo<T>
     public string Describe() => $"logging({Inner.Describe()})";
 }
 
+[RegisterSingleton<IRepo<int>, NumberRepo>(ServiceKey = "numbers")]
+public class NumberRepo : IRepo<int>
+{
+    public string Describe() => "repo<Int32>";
+}
+
+[RegisterDecorator(ServiceType = typeof(IRepo<>), ServiceKey = "numbers")]
+public class KeyedLoggingRepo<T> : IRepo<T>
+{
+    public IRepo<T> Inner { get; }
+
+    public KeyedLoggingRepo(IRepo<T> inner) => Inner = inner;
+
+    public string Describe() => $"keyed-logging({Inner.Describe()})";
+}
+
+public interface IFactoryGreeter
+{
+    string Greet();
+}
+
+[RegisterSingleton<IFactoryGreeter>]
+public class FactoryGreeter : IFactoryGreeter
+{
+    public string Greet() => "factory-base";
+}
+
+[RegisterDecorator<IFactoryGreeter>(Factory = nameof(Create))]
+public class FactoryGreeterDecorator : IFactoryGreeter
+{
+    public IFactoryGreeter Inner { get; }
+
+    private FactoryGreeterDecorator(IFactoryGreeter inner) => Inner = inner;
+
+    public static IFactoryGreeter Create(IServiceProvider serviceProvider, IFactoryGreeter inner)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        return new FactoryGreeterDecorator(inner);
+    }
+
+    public string Greet() => $"factory({Inner.Greet()})";
+}
+
+public interface ITaggedGreeter
+{
+    string Greet();
+}
+
+[RegisterSingleton<ITaggedGreeter>(Tags = "Alpha")]
+public class TaggedGreeter : ITaggedGreeter
+{
+    public string Greet() => "tagged-base";
+}
+
+[RegisterDecorator<ITaggedGreeter>(Tags = "Alpha")]
+public class TaggedGreeterDecorator : ITaggedGreeter
+{
+    public ITaggedGreeter Inner { get; }
+
+    public TaggedGreeterDecorator(ITaggedGreeter inner) => Inner = inner;
+
+    public string Greet() => $"tagged({Inner.Greet()})";
+}
+
+public interface ILoggerGreeter
+{
+    string Greet();
+}
+
+[RegisterSingleton<ILoggerGreeter>]
+public class LoggerGreeter : ILoggerGreeter
+{
+    public string Greet() => "logger-base";
+}
+
+[RegisterDecorator<ILoggerGreeter>]
+public class LoggerGreeterDecorator : ILoggerGreeter
+{
+    public ILoggerGreeter Inner { get; }
+
+    public ILogger<LoggerGreeterDecorator> Logger { get; }
+
+    public LoggerGreeterDecorator(ILoggerGreeter inner, ILogger<LoggerGreeterDecorator> logger)
+    {
+        Inner = inner;
+        Logger = logger;
+    }
+
+    public string Greet()
+    {
+        Logger.LogInformation("logger {inner}", Inner.Greet());
+        return $"logger({Inner.Greet()})";
+    }
+}
+
 public interface IKeyedThing
 {
     string Name { get; }
@@ -79,4 +177,38 @@ public class WrappedThing : IKeyedThing
     public WrappedThing(IKeyedThing inner) => Inner = inner;
 
     public string Name => $"wrapped({Inner.Name})";
+}
+
+public interface IKeyedFactoryThing
+{
+    string Name { get; }
+}
+
+[RegisterSingleton<IKeyedFactoryThing>(ServiceKey = "factory")]
+public class KeyedFactoryThing : IKeyedFactoryThing
+{
+    public string Name => "keyed-factory";
+}
+
+[RegisterDecorator<IKeyedFactoryThing>(ServiceKey = "factory", Factory = nameof(Create))]
+public class KeyedFactoryThingDecorator : IKeyedFactoryThing
+{
+    public IKeyedFactoryThing Inner { get; }
+
+    public object? ServiceKey { get; }
+
+    private KeyedFactoryThingDecorator(object? serviceKey, IKeyedFactoryThing inner)
+    {
+        ServiceKey = serviceKey;
+        Inner = inner;
+    }
+
+    public static IKeyedFactoryThing Create(IServiceProvider serviceProvider, object? serviceKey, IKeyedFactoryThing inner)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        return new KeyedFactoryThingDecorator(serviceKey, inner);
+    }
+
+    public string Name => $"{ServiceKey}-factory({Inner.Name})";
 }

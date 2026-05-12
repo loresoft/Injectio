@@ -18,7 +18,7 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             var tagSet = new global::System.Collections.Generic.HashSet<string>(tags ?? global::System.Linq.Enumerable.Empty<string>());
 
-            if (tagSet.Count == 0 || tagSet.Intersect(new[] { "Test", "Big" }).Any())
+            if (tagSet.Count == 0 || global::System.Linq.Enumerable.Any(global::System.Linq.Enumerable.Intersect(tagSet, new[] { "Test", "Big" })))
             {
                 global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                     serviceCollection,

@@ -37,6 +37,29 @@ public class ServiceRegistrationDecoratorTests
     }
 
     [Fact]
+    public Task GenerateDecoratorGenericAttributeWithImplementationType()
+    {
+        const string source = """
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterSingleton]
+            public class Service : IService { }
+
+            [RegisterDecorator<IService, LoggingDecorator>]
+            public class LoggingDecorator : IService
+            {
+                public LoggingDecorator(IService inner) { }
+            }
+            """;
+
+        return Verify(source);
+    }
+
+    [Fact]
     public Task GenerateDecoratorGenericAttribute()
     {
         const string source = """
@@ -53,6 +76,33 @@ public class ServiceRegistrationDecoratorTests
             public class LoggingDecorator : IService
             {
                 public LoggingDecorator(IService inner) { }
+            }
+            """;
+
+        return Verify(source);
+    }
+
+    [Fact]
+    public Task GenerateDecoratorKeyedFactory()
+    {
+        const string source = """
+            using System;
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterSingleton<IService>(ServiceKey = "Alpha")]
+            public class Service : IService { }
+
+            [RegisterDecorator<IService>(ServiceKey = "Alpha", Factory = nameof(Create))]
+            public class LoggingDecorator : IService
+            {
+                public LoggingDecorator(IService inner) { }
+
+                public static IService Create(IServiceProvider serviceProvider, object? serviceKey, IService inner)
+                    => new LoggingDecorator(inner);
             }
             """;
 
@@ -188,6 +238,52 @@ public class ServiceRegistrationDecoratorTests
     }
 
     [Fact]
+    public Task GenerateDecoratorOpenGenericKeyed()
+    {
+        const string source = """
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IRepo<T> { }
+
+            [RegisterSingleton(ServiceType = typeof(IRepo<>), ImplementationType = typeof(Repo<>), ServiceKey = "cache")]
+            public class Repo<T> : IRepo<T> { }
+
+            [RegisterDecorator(ServiceType = typeof(IRepo<>), ServiceKey = "cache")]
+            public class LoggingRepo<T> : IRepo<T>
+            {
+                public LoggingRepo(IRepo<T> inner) { }
+            }
+            """;
+
+        return Verify(source);
+    }
+
+    [Fact]
+    public Task GenerateDecoratorOpenGenericAnyKey()
+    {
+        const string source = """
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IRepo<T> { }
+
+            [RegisterSingleton(ServiceType = typeof(IRepo<>), ImplementationType = typeof(Repo<>), ServiceKey = "cache")]
+            public class Repo<T> : IRepo<T> { }
+
+            [RegisterDecorator(ServiceType = typeof(IRepo<>), AnyKey = true)]
+            public class LoggingRepo<T> : IRepo<T>
+            {
+                public LoggingRepo(IRepo<T> inner) { }
+            }
+            """;
+
+        return Verify(source);
+    }
+
+    [Fact]
     public Task GenerateDecoratorTags()
     {
         const string source = """
@@ -208,6 +304,48 @@ public class ServiceRegistrationDecoratorTests
             """;
 
         return Verify(source);
+    }
+
+    [Fact]
+    public Task GenerateDecoratorMultipleTags()
+    {
+        const string source = """
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterSingleton(Tags = "FrontEnd;BackEnd, Worker")]
+            public class Service : IService { }
+
+            [RegisterDecorator<IService>(Tags = "FrontEnd;BackEnd, Worker")]
+            public class LoggingDecorator : IService
+            {
+                public LoggingDecorator(IService inner) { }
+            }
+            """;
+
+        return Verify(source);
+    }
+
+    [Fact]
+    public void GenerateDecorationExtensionsWithTrimAnnotations()
+    {
+        const string source = "namespace Injectio.Sample;";
+
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source, "Injectio.Extensions.g.cs");
+
+        output.Should().Contain("Decorate<TService,");
+        output.Should().Contain("DecorateKeyed<TService,");
+        output.Should().Contain("#if NET5_0_OR_GREATER");
+        output.Should().Contain("[global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicConstructors)]");
+        output.Should().Contain("#if NET7_0_OR_GREATER");
+        output.Should().Contain("[global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Closing an open generic decorator type at runtime requires dynamic code generation.\")]");
+        output.Should().Contain("[global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Closing an open generic decorator type at runtime can require constructors that are not statically visible to the trimmer.\")]");
+        output.Should().NotContain("internal sealed class DynamicallyAccessedMembersAttribute");
+        output.Should().NotContain("internal sealed class RequiresDynamicCodeAttribute");
+        output.Should().NotContain("internal sealed class RequiresUnreferencedCodeAttribute");
     }
 
     // ------- Diagnostics -------
@@ -256,6 +394,30 @@ public class ServiceRegistrationDecoratorTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
         diagnostics.Should().Contain(d => d.Id == "INJ0011");
+    }
+
+    [Fact]
+    public async Task DiagnoseDecoratorMissingInnerConstructor()
+    {
+        const string source = """
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterSingleton]
+            public class Service : IService { }
+
+            [RegisterDecorator<IService>]
+            public class LoggingDecorator : IService
+            {
+                public LoggingDecorator() { }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        diagnostics.Should().Contain(d => d.Id == "INJ0012");
     }
 
     [Fact]
@@ -389,6 +551,30 @@ public class ServiceRegistrationDecoratorTests
         diagnostics.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task NoDiagnosticForValidKeyedDecorator()
+    {
+        const string source = """
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterSingleton<IService>(ServiceKey = "Alpha")]
+            public class Service : IService { }
+
+            [RegisterDecorator<IService>(ServiceKey = "Alpha")]
+            public class LoggingDecorator : IService
+            {
+                public LoggingDecorator(IService inner) { }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        diagnostics.Should().BeEmpty();
+    }
+
 
     private static Task Verify(string source)
     {
@@ -400,7 +586,7 @@ public class ServiceRegistrationDecoratorTests
             .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
-    private static string GetGeneratedOutput<T>(string source)
+    private static string GetGeneratedOutput<T>(string source, string generatedFileName = "Injectio.g.cs")
         where T : IIncrementalGenerator, new()
     {
         var parseOptions = CSharpParseOptions.Default.WithPreprocessorSymbols(
@@ -436,7 +622,7 @@ public class ServiceRegistrationDecoratorTests
 
         var generated = outputCompilation.SyntaxTrees
             .Skip(originalTreeCount)
-            .FirstOrDefault(t => Path.GetFileName(t.FilePath) == "Injectio.g.cs");
+            .FirstOrDefault(t => Path.GetFileName(t.FilePath) == generatedFileName);
 
         return generated?.ToString() ?? string.Empty;
     }

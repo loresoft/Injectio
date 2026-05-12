@@ -18,18 +18,26 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             var tagSet = new global::System.Collections.Generic.HashSet<string>(tags ?? global::System.Linq.Enumerable.Empty<string>());
 
-            if (tagSet.Count == 0 || global::System.Linq.Enumerable.Any(global::System.Linq.Enumerable.Intersect(tagSet, new[] { "Client", "FrontEnd" })))
+            if (tagSet.Count == 0 || global::System.Linq.Enumerable.Any(global::System.Linq.Enumerable.Intersect(tagSet, new[] { "FrontEnd", "BackEnd", "Worker" })))
             {
                 global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                     serviceCollection,
-                    global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Injectio.Sample.IServiceTag, global::Injectio.Sample.ServiceTag>(
-                        (serviceProvider) => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Injectio.Sample.ServiceTag>(serviceProvider)
+                    global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Injectio.Sample.IService, global::Injectio.Sample.Service>(
+                        (serviceProvider) => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Injectio.Sample.Service>(serviceProvider)
                     )
                 );
 
                 global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                     serviceCollection,
-                    global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Injectio.Sample.ServiceTag, global::Injectio.Sample.ServiceTag>()
+                    global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Injectio.Sample.Service, global::Injectio.Sample.Service>()
+                );
+
+            }
+
+            if (tagSet.Count == 0 || global::System.Linq.Enumerable.Any(global::System.Linq.Enumerable.Intersect(tagSet, new[] { "FrontEnd", "BackEnd", "Worker" })))
+            {
+                global::Injectio.Extensions.DecorationExtensions.Decorate<global::Injectio.Sample.IService, global::Injectio.Sample.LoggingDecorator>(
+                    serviceCollection
                 );
 
             }

@@ -338,12 +338,55 @@ public class DecorationExtensionsTests
         var services = new ServiceCollection();
         services.AddKeyedTransient<IRepository<string>, InMemoryRepository<string>>("cache");
 
-        services.DecorateOpenGeneric(typeof(IRepository<>), typeof(CachingRepository<>));
+        services.DecorateOpenGeneric(typeof(IRepository<>), typeof(CachingRepository<>), "cache");
 
         using var provider = services.BuildServiceProvider();
         var repo = provider.GetRequiredKeyedService<IRepository<string>>("cache");
 
         repo.Should().BeOfType<CachingRepository<string>>();
+    }
+
+    [Fact]
+    public void WhenDecorateOpenGenericThenKeyedRegistrationsAreSkipped()
+    {
+        var services = new ServiceCollection();
+        services.AddTransient<IRepository<string>, InMemoryRepository<string>>();
+        services.AddKeyedTransient<IRepository<string>, InMemoryRepository<string>>("cache");
+
+        services.DecorateOpenGeneric(typeof(IRepository<>), typeof(CachingRepository<>));
+
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IRepository<string>>().Should().BeOfType<CachingRepository<string>>();
+        provider.GetRequiredKeyedService<IRepository<string>>("cache").Should().BeOfType<InMemoryRepository<string>>();
+    }
+
+    [Fact]
+    public void WhenDecorateOpenGenericKeyedWithDifferentKeyThenKeyedRegistrationIsSkipped()
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedTransient<IRepository<string>, InMemoryRepository<string>>("cache");
+
+        services.DecorateOpenGeneric(typeof(IRepository<>), typeof(CachingRepository<>), "other");
+
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredKeyedService<IRepository<string>>("cache").Should().BeOfType<InMemoryRepository<string>>();
+    }
+
+    [Fact]
+    public void WhenDecorateOpenGenericKeyedWithAnyKeyThenAllKeyedRegistrationsAreDecorated()
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedTransient<IRepository<string>, InMemoryRepository<string>>("cache");
+        services.AddKeyedTransient<IRepository<int>, InMemoryRepository<int>>("audit");
+
+        services.DecorateOpenGeneric(typeof(IRepository<>), typeof(CachingRepository<>), KeyedService.AnyKey);
+
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredKeyedService<IRepository<string>>("cache").Should().BeOfType<CachingRepository<string>>();
+        provider.GetRequiredKeyedService<IRepository<int>>("audit").Should().BeOfType<CachingRepository<int>>();
     }
 
     [Fact]

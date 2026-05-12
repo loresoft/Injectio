@@ -20,12 +20,18 @@ namespace Microsoft.Extensions.DependencyInjection
 
             global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAdd(
                 serviceCollection,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::Injectio.Sample.IService, global::Injectio.Sample.Service>("Alpha")
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton(
+                    typeof(global::Injectio.Sample.IRepo<>),
+                    "cache",
+                    typeof(global::Injectio.Sample.Repo<>)
+                )
             );
 
-            global::Injectio.Extensions.DecorationExtensions.DecorateKeyed<global::Injectio.Sample.IService, global::Injectio.Sample.LoggingDecorator>(
+            global::Injectio.Extensions.DecorationExtensions.DecorateOpenGeneric(
                 serviceCollection,
-                "Alpha"
+                typeof(global::Injectio.Sample.IRepo<>),
+                typeof(global::Injectio.Sample.LoggingRepo<>),
+                global::Microsoft.Extensions.DependencyInjection.KeyedService.AnyKey
             );
 
             return serviceCollection;
