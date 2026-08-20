@@ -15,6 +15,7 @@ Source generator that helps register attribute marked services in the dependency
 - Transient, Singleton, Scoped service registration
 - Factory registration
 - Module method registration
+- Host-aware module registration with `IHostApplicationBuilder`
 - Duplicate Strategy - Skip,Replace,Append
 - Registration Strategy - Self, Implemented Interfaces, Self With Interfaces
 - Decorator registration (`RegisterDecorator`) — no runtime dependencies
@@ -332,7 +333,7 @@ public class FrontEndLoggingDecorator : IService
 
 #### Register Method
 
-When the service registration is complex, use the `RegisterServices` attribute on a method that has a parameter of `IServiceCollection` or `ServiceCollection`
+When the service registration is complex, use the `RegisterServices` attribute on a method whose first parameter is `IServiceCollection`, `ServiceCollection`, or `IHostApplicationBuilder`. The method may optionally receive a supported string tag collection as its second parameter.
 
 ```c#
 public class RegistrationModule
@@ -351,14 +352,57 @@ public class RegistrationModule
 }
 ```
 
+Register methods can inspect the tags passed to the generated extension method and conditionally add services. Supported tag parameters include `IEnumerable<string>`, `IReadOnlySet<string>`, `IReadOnlyCollection<string>`, `ICollection<string>`, `ISet<string>`, and `HashSet<string>`.
+
+```c#
+public static class TaggedRegistrationModule
+{
+    [RegisterServices]
+    public static void Register(IServiceCollection services, IReadOnlySet<string> tags)
+    {
+        if (tags.Contains("Client"))
+        {
+            services.AddSingleton<ClientService>();
+        }
+    }
+}
+
+var services = new ServiceCollection();
+services.AddInjectioTestsConsole("Client");
+```
+
+Host-aware modules can configure the full application builder:
+
+```c#
+public static class HostRegistrationModule
+{
+    [RegisterServices]
+    public static void Register(IHostApplicationBuilder builder)
+    {
+        builder.Configuration.AddJsonFile("feature.json", optional: true);
+    }
+}
+```
+
 #### Add to container
 
-The source generator creates an extension method with all the discovered services registered.  Call the generated extension method to add the services to the container.  The extension method will be called `Add[AssemblyName]`.  The assembly name will have the dots removed.
+The source generator creates an `IServiceCollection` extension method named `Add[AssemblyName]`, with dots removed from the assembly name. This extension registers discovered services and decorators, then invokes registration methods whose first parameter is `IServiceCollection` or `ServiceCollection`.
 
 ```c#
 var services = new ServiceCollection();
 services.AddInjectioTestsConsole();
 ```
+
+When the consuming project references `Microsoft.Extensions.Hosting.Abstractions`, the generator also creates an overload for `IHostApplicationBuilder`. Injectio does not add this dependency to DI-only projects.
+
+The host extension first calls the service collection extension through `builder.Services`, then invokes registration methods whose first parameter is `IHostApplicationBuilder`. Calling the host extension is therefore sufficient to run both service and host registrations.
+
+```c#
+var builder = Host.CreateApplicationBuilder(args);
+builder.AddInjectioTestsConsole();
+```
+
+Generated registration methods are idempotent. Service collection registrations and host registrations are tracked independently, so calling the service extension before the host extension still runs each portion once. For each portion, the tags supplied to its first invocation determine the registrations; later invocations are ignored.
 
 Override the extension method name by using the `InjectioName` MSBuild property.
 

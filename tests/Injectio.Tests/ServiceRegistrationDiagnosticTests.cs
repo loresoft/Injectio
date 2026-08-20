@@ -66,6 +66,79 @@ public class ServiceRegistrationDiagnosticTests
     }
 
     [Fact]
+    public async Task NoDiagnosticsForHostApplicationBuilderModule()
+    {
+        const string source = """
+            using Injectio.Attributes;
+            using Microsoft.Extensions.Hosting;
+
+            namespace Injectio.Sample;
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IHostApplicationBuilder builder)
+                {
+                }
+            }
+
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task NoDiagnosticsForHostApplicationBuilderModuleWithTags()
+    {
+        const string source = """
+            using System.Collections.Generic;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.Hosting;
+
+            namespace Injectio.Sample;
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IHostApplicationBuilder builder, IEnumerable<string> tags)
+                {
+                }
+            }
+
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DiagnoseHostApplicationBuilderModuleInvalidSecondParameter()
+    {
+        const string source = """
+            using Injectio.Attributes;
+            using Microsoft.Extensions.Hosting;
+
+            namespace Injectio.Sample;
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IHostApplicationBuilder builder, string tag)
+                {
+                }
+            }
+
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        diagnostics.Should().ContainSingle(d => d.Id == "INJ0002");
+    }
+
+    [Fact]
     public async Task DiagnoseRegisterServicesTooManyParameters()
     {
         const string source = """

@@ -107,9 +107,10 @@ public class ServiceRegistrationAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var hasServiceCollection = SymbolHelpers.IsServiceCollection(methodSymbol.Parameters[0]);
+        var hasSupportedParameter = SymbolHelpers.IsServiceCollection(methodSymbol.Parameters[0])
+            || SymbolHelpers.IsHostApplicationBuilder(methodSymbol.Parameters[0]);
 
-        if (!hasServiceCollection)
+        if (!hasSupportedParameter)
         {
             Diagnostic diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.InvalidMethodSignature,

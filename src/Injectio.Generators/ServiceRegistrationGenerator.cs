@@ -132,6 +132,10 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Select(static (c, _) => c.AssemblyName)
             .WithTrackingName("AssemblyName");
 
+        var hasHostApplicationBuilder = context.CompilationProvider
+            .Select(static (c, _) => c.GetTypeByMetadataName(KnownTypes.HostApplicationBuilderFullName) is not null)
+            .WithTrackingName("HasHostApplicationBuilder");
+
         // include config options
         var methodOptions = context.AnalyzerConfigOptionsProvider
             .Select(static (c, _) =>
@@ -177,16 +181,18 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             .Combine(allDecoratorRegistrations)
             .Combine(assemblyName)
             .Combine(methodOptions)
+            .Combine(hasHostApplicationBuilder)
             .Select(static (combined, _) =>
             {
-                var ((((services, modules), decorators), assemblyName), options) = combined;
+                var (((((services, modules), decorators), assemblyName), options), hasHostApplicationBuilder) = combined;
 
                 return new RegistrationContext(
                     ServiceRegistrations: services,
                     ModuleRegistrations: CreateModuleRegistrations(modules),
                     DecoratorRegistrations: decorators,
                     AssemblyName: assemblyName,
-                    MethodOptions: options
+                    MethodOptions: options,
+                    HasHostApplicationBuilder: hasHostApplicationBuilder
                 );
             })
             .WithTrackingName("Generation");
@@ -223,7 +229,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             decoratorRegistrations,
             source.AssemblyName,
             methodName,
-            methodInternal);
+            methodInternal,
+            source.HasHostApplicationBuilder);
 
         // add source file
         sourceContext.AddSource("Injectio.g.cs", SourceText.From(result, Encoding.UTF8));
@@ -287,7 +294,7 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         if (context.TargetSymbol is not IMethodSymbol methodSymbol)
             return null;
 
-        var (isValid, hasTagCollection) = ValidateMethod(methodSymbol);
+        var (isValid, hasTagCollection, parameterType) = ValidateMethod(methodSymbol);
         if (!isValid)
             return null;
 
@@ -295,7 +302,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             ClassName: methodSymbol.ContainingType.ToDisplayString(SymbolHelpers.FullyQualifiedNullableFormat),
             MethodName: methodSymbol.Name,
             IsStatic: methodSymbol.IsStatic,
-            HasTagCollection: hasTagCollection
+            HasTagCollection: hasTagCollection,
+            ParameterType: parameterType
         );
     }
 
@@ -408,19 +416,28 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             IsOpenGeneric: isOpenGeneric);
     }
 
-    private static (bool isValid, bool hasTagCollection) ValidateMethod(IMethodSymbol methodSymbol)
+    private static (bool isValid, bool hasTagCollection, ModuleParameterType parameterType) ValidateMethod(IMethodSymbol methodSymbol)
     {
-        var hasServiceCollection = false;
+        var parameterType = ModuleParameterType.ServiceCollection;
+        var hasSupportedParameter = false;
 
-        // validate first parameter should be service collection
+        // validate first parameter should be service collection or host application builder
         if (methodSymbol.Parameters.Length is 1 or 2)
         {
             var parameterSymbol = methodSymbol.Parameters[0];
-            hasServiceCollection = SymbolHelpers.IsServiceCollection(parameterSymbol);
+            if (SymbolHelpers.IsServiceCollection(parameterSymbol))
+            {
+                hasSupportedParameter = true;
+            }
+            else if (SymbolHelpers.IsHostApplicationBuilder(parameterSymbol))
+            {
+                hasSupportedParameter = true;
+                parameterType = ModuleParameterType.HostApplicationBuilder;
+            }
         }
 
         if (methodSymbol.Parameters.Length is 1)
-            return (hasServiceCollection, false);
+            return (hasSupportedParameter, false, parameterType);
 
         // validate second parameter should be string collection
         if (methodSymbol.Parameters.Length is 2)
@@ -428,12 +445,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             var parameterSymbol = methodSymbol.Parameters[1];
             bool hasTagCollection = SymbolHelpers.IsStringCollection(parameterSymbol);
 
-            // to be valid, parameter 0 must be service collection and parameter 1 must be string collection,
-            return (hasServiceCollection && hasTagCollection, hasTagCollection);
+            // to be valid, parameter 0 must be supported and parameter 1 must be string collection
+            return (hasSupportedParameter && hasTagCollection, hasTagCollection, parameterType);
         }
 
         // invalid method
-        return (false, false);
+        return (false, false, parameterType);
     }
 
     private static ServiceRegistration? CreateServiceRegistration(INamedTypeSymbol classSymbol, AttributeData attribute, string serviceLifetime)

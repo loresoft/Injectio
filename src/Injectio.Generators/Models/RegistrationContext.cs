@@ -7,5 +7,6 @@ public record RegistrationContext(
     EquatableArray<ModuleRegistration> ModuleRegistrations,
     EquatableArray<DecoratorRegistration> DecoratorRegistrations,
     string? AssemblyName,
-    MethodOptions? MethodOptions
+    MethodOptions? MethodOptions,
+    bool HasHostApplicationBuilder
 );

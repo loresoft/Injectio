@@ -29,6 +29,8 @@ public static class KnownTypes
     public const string ModuleAttributeTypeName = $"{ModuleAttributeShortName}Attribute";
     public const string ModuleAttributeFullName = $"{AbstractionNamespace}.{ModuleAttributeTypeName}";
 
+    public const string HostApplicationBuilderFullName = "Microsoft.Extensions.Hosting.IHostApplicationBuilder";
+
     public const string DecoratorAttributeShortName = "RegisterDecorator";
     public const string DecoratorAttributeTypeName = $"{DecoratorAttributeShortName}Attribute";
     public const string DecoratorAttributeFullName = $"{AbstractionNamespace}.{DecoratorAttributeTypeName}";

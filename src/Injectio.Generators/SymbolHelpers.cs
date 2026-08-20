@@ -115,6 +115,23 @@ internal static class SymbolHelpers
         };
     }
 
+    public static bool IsHostApplicationBuilder(IParameterSymbol parameterSymbol)
+    {
+        return parameterSymbol?.Type is
+        {
+            Name: "IHostApplicationBuilder",
+            ContainingNamespace:
+            {
+                Name: "Hosting",
+                ContainingNamespace:
+                {
+                    Name: "Extensions",
+                    ContainingNamespace.Name: "Microsoft"
+                }
+            }
+        };
+    }
+
     public static bool IsStringCollection(IParameterSymbol parameterSymbol)
     {
         var type = parameterSymbol?.Type as INamedTypeSymbol;

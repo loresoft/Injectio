@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
@@ -37,6 +38,115 @@ public class ServiceRegistrationGeneratorTests
             """;
 
         return Verify(source);
+    }
+
+    [Fact]
+    public void GenerateRegisterServicesHostApplicationBuilder()
+    {
+        const string source = """
+
+            using System.Collections.Generic;
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+            using Microsoft.Extensions.Hosting;
+
+            namespace Injectio.Sample;
+
+            public static class ServiceCollectionModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services)
+                {
+                }
+            }
+
+            public static class StaticHostModule
+            {
+                [RegisterServices]
+                public static void Register(IHostApplicationBuilder hostApplicationBuilder, IReadOnlySet<string> tags)
+                {
+                }
+            }
+
+            public class InstanceHostModule
+            {
+                [RegisterServices]
+                public void Register(IHostApplicationBuilder hostApplicationBuilder)
+                {
+                }
+            }
+
+            """;
+
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source, includeHostingReference: true);
+
+        var serviceGuardIndex = output.IndexOf("typeof(ServiceRegistrationMarker)", StringComparison.Ordinal);
+        var serviceModuleIndex = output.IndexOf("global::Injectio.Sample.ServiceCollectionModule.Register(serviceCollection);", StringComparison.Ordinal);
+        var forwardingIndex = output.IndexOf("hostApplicationBuilder.Services.AddTestGenerator(tags);", StringComparison.Ordinal);
+        var hostGuardIndex = output.IndexOf("typeof(HostRegistrationMarker)", StringComparison.Ordinal);
+        var staticHostModuleIndex = output.IndexOf("global::Injectio.Sample.StaticHostModule.Register(hostApplicationBuilder, tagSet);", StringComparison.Ordinal);
+        var instanceHostModuleIndex = output.IndexOf("module0001.Register(hostApplicationBuilder);", StringComparison.Ordinal);
+
+        (serviceGuardIndex >= 0
+            && serviceModuleIndex > serviceGuardIndex
+            && forwardingIndex > serviceModuleIndex
+            && hostGuardIndex > forwardingIndex
+            && staticHostModuleIndex > hostGuardIndex
+            && instanceHostModuleIndex > staticHostModuleIndex).Should().BeTrue();
+        output.Should().Contain("private sealed class ServiceRegistrationMarker;");
+        output.Should().Contain("private sealed class HostRegistrationMarker;");
+    }
+
+    [Fact]
+    public void GenerateRegisterServicesInvalidHostApplicationBuilderMethod()
+    {
+        const string source = """
+
+            using Injectio.Attributes;
+            using Microsoft.Extensions.Hosting;
+
+            namespace Injectio.Sample;
+
+            public static class InvalidHostModule
+            {
+                [RegisterServices]
+                public static void Register(IHostApplicationBuilder hostApplicationBuilder, string tag)
+                {
+                }
+            }
+
+            """;
+
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source, includeHostingReference: true);
+
+        output.Should().NotContain("global::Injectio.Sample.InvalidHostModule.Register");
+    }
+
+    [Fact]
+    public void DoesNotGenerateHostApplicationBuilderOverloadWithoutHostingReference()
+    {
+        const string source = """
+
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace Injectio.Sample;
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void Register(IServiceCollection services)
+                {
+                }
+            }
+
+            """;
+
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source, includeHostingReference: false);
+
+        output.Should().NotContain("global::Microsoft.Extensions.Hosting.IHostApplicationBuilder");
+        output.Should().Contain("private sealed class ServiceRegistrationMarker;");
+        output.Should().NotContain("HostRegistrationMarker");
     }
 
     [Fact]
@@ -234,6 +344,38 @@ public class ServiceRegistrationGeneratorTests
             """;
 
         return Verify(source);
+    }
+
+    [Fact]
+    public void GenerateRegisterServicesMultipleStaticMethodsInSameClass()
+    {
+        const string source = """
+
+            using Injectio.Attributes;
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace Injectio.Sample;
+
+            public static class RegistrationModule
+            {
+                [RegisterServices]
+                public static void RegisterFirst(IServiceCollection services)
+                {
+                }
+
+                [RegisterServices]
+                public static void RegisterSecond(IServiceCollection services)
+                {
+                }
+            }
+
+            """;
+
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        (output.Contains("global::Injectio.Sample.RegistrationModule.RegisterFirst(serviceCollection);", StringComparison.Ordinal)
+            && output.Contains("global::Injectio.Sample.RegistrationModule.RegisterSecond(serviceCollection);", StringComparison.Ordinal))
+            .Should().BeTrue();
     }
 
     [Fact]
@@ -516,7 +658,7 @@ public class ServiceRegistrationGeneratorTests
             .ScrubLinesContaining("GeneratedCodeAttribute");
     }
 
-    private static string GetGeneratedOutput<T>(string source)
+    private static string GetGeneratedOutput<T>(string source, bool includeHostingReference = false)
         where T : IIncrementalGenerator, new()
     {
         var parseOptions = CSharpParseOptions.Default.WithPreprocessorSymbols(
@@ -526,14 +668,20 @@ public class ServiceRegistrationGeneratorTests
             "NET10_0_OR_GREATER");
 
         var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);
-        var references = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+        var hostingAssembly = typeof(Microsoft.Extensions.Hosting.IHostApplicationBuilder).Assembly;
+        IEnumerable<MetadataReference> references = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(assembly => !assembly.IsDynamic
+                && !string.IsNullOrWhiteSpace(assembly.Location)
+                && assembly != hostingAssembly)
             .Select(assembly => MetadataReference.CreateFromFile(assembly.Location))
             .Concat(
             [
                 MetadataReference.CreateFromFile(typeof(T).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(IServiceCollection).Assembly.Location),
             ]);
+
+        if (includeHostingReference)
+            references = references.Append(MetadataReference.CreateFromFile(hostingAssembly.Location));
 
         var compilation = CSharpCompilation.Create(
             "Test.Generator",

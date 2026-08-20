@@ -12,8 +12,9 @@ public static class ServiceRegistrationWriter
         IReadOnlyList<ServiceRegistration> serviceRegistrations,
         string? assemblyName,
         string? methodName,
-        string? methodInternal)
-        => GenerateExtensionClass(moduleRegistrations, serviceRegistrations, Array.Empty<DecoratorRegistration>(), assemblyName, methodName, methodInternal);
+        string? methodInternal,
+        bool hasHostApplicationBuilder = false)
+        => GenerateExtensionClass(moduleRegistrations, serviceRegistrations, Array.Empty<DecoratorRegistration>(), assemblyName, methodName, methodInternal, hasHostApplicationBuilder);
 
     public static string GenerateExtensionClass(
         IReadOnlyList<ModuleRegistration> moduleRegistrations,
@@ -21,7 +22,8 @@ public static class ServiceRegistrationWriter
         IReadOnlyList<DecoratorRegistration> decoratorRegistrations,
         string? assemblyName,
         string? methodName,
-        string? methodInternal)
+        string? methodInternal,
+        bool hasHostApplicationBuilder = false)
     {
         var codeBuilder = new IndentedStringBuilder();
         codeBuilder
@@ -62,6 +64,11 @@ public static class ServiceRegistrationWriter
 
 
         codeBuilder
+            .AppendLine("if (global::System.Linq.Enumerable.Any(serviceCollection, serviceDescriptor => serviceDescriptor.ServiceType == typeof(ServiceRegistrationMarker)))")
+            .AppendLine("    return serviceCollection;")
+            .AppendLine()
+            .AppendLine("serviceCollection.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof(ServiceRegistrationMarker), new ServiceRegistrationMarker()));")
+            .AppendLine()
             .AppendLine("var tagSet = new global::System.Collections.Generic.HashSet<string>(tags ?? global::System.Linq.Enumerable.Empty<string>());")
             .AppendLine();
 
@@ -69,7 +76,10 @@ public static class ServiceRegistrationWriter
 
         foreach (var moduleRegistration in moduleRegistrations)
         {
-            moduleCount = WriteModule(codeBuilder, moduleRegistration, moduleCount);
+            if (moduleRegistration.ParameterType != ModuleParameterType.ServiceCollection)
+                continue;
+
+            moduleCount = WriteModule(codeBuilder, moduleRegistration, moduleCount, "serviceCollection");
         }
 
         foreach (var serviceRegistration in serviceRegistrations)
@@ -85,7 +95,26 @@ public static class ServiceRegistrationWriter
         codeBuilder
             .AppendLine("return serviceCollection;")
             .DecrementIndent()
-            .AppendLine("}") // method
+            .AppendLine("}"); // method
+
+        if (hasHostApplicationBuilder)
+        {
+            WriteHostApplicationBuilderMethod(
+                codeBuilder,
+                moduleRegistrations,
+                assemblyName,
+                methodName,
+                methodInternal);
+        }
+
+        codeBuilder
+            .AppendLine()
+            .AppendLine("private sealed class ServiceRegistrationMarker;");
+
+        if (hasHostApplicationBuilder)
+            codeBuilder.AppendLine("private sealed class HostRegistrationMarker;");
+
+        codeBuilder
             .DecrementIndent()
             .AppendLine("}") // class
             .DecrementIndent()
@@ -97,7 +126,8 @@ public static class ServiceRegistrationWriter
     private static int WriteModule(
         IndentedStringBuilder codeBuilder,
         ModuleRegistration moduleRegistration,
-        int moduleCount)
+        int moduleCount,
+        string parameterName)
     {
         if (moduleRegistration.IsStatic)
         {
@@ -107,7 +137,7 @@ public static class ServiceRegistrationWriter
                 .Append('.')
                 .Append(moduleRegistration.MethodName)
                 .Append("(")
-                .Append("serviceCollection")
+                .Append(parameterName)
                 .AppendIf(", tagSet", moduleRegistration.HasTagCollection)
                 .Append(");")
                 .AppendLine()
@@ -129,7 +159,7 @@ public static class ServiceRegistrationWriter
                 .Append('.')
                 .Append(moduleRegistration.MethodName)
                 .Append("(")
-                .Append("serviceCollection")
+                .Append(parameterName)
                 .AppendIf(", tagSet", moduleRegistration.HasTagCollection)
                 .Append(");")
                 .AppendLine()
@@ -139,6 +169,60 @@ public static class ServiceRegistrationWriter
         }
 
         return moduleCount;
+    }
+
+    private static void WriteHostApplicationBuilderMethod(
+        IndentedStringBuilder codeBuilder,
+        IReadOnlyList<ModuleRegistration> moduleRegistrations,
+        string? assemblyName,
+        string? methodName,
+        string? methodInternal)
+    {
+        codeBuilder
+            .AppendLine()
+            .AppendLine("/// <summary>")
+            .AppendLine($"/// Adds discovered services from {assemblyName ?? string.Empty} to the specified host application builder")
+            .AppendLine("/// </summary>")
+            .AppendLine("/// <param name=\"hostApplicationBuilder\">The host application builder.</param>")
+            .AppendLine("/// <param name=\"tags\">The service registration tags to include.</param>")
+            .AppendLine("/// <returns>The host application builder</returns>")
+            .Append("[global::System.CodeDom.Compiler.GeneratedCodeAttribute(\"")
+            .Append(ThisAssembly.Product)
+            .Append("\", \"")
+            .Append(ThisAssembly.InformationalVersion)
+            .AppendLine("\")]")
+            .Append(string.Equals(methodInternal, "true") ? "internal" : "public")
+            .Append(" static global::Microsoft.Extensions.Hosting.IHostApplicationBuilder")
+            .Append(" Add")
+            .Append(methodName ?? "InjectioService")
+            .AppendLine("(this global::Microsoft.Extensions.Hosting.IHostApplicationBuilder hostApplicationBuilder, params string[]? tags)")
+            .AppendLine("{")
+            .IncrementIndent()
+            .Append("hostApplicationBuilder.Services.Add")
+            .Append(methodName ?? "InjectioService")
+            .AppendLine("(tags);")
+            .AppendLine()
+            .AppendLine("if (global::System.Linq.Enumerable.Any(hostApplicationBuilder.Services, serviceDescriptor => serviceDescriptor.ServiceType == typeof(HostRegistrationMarker)))")
+            .AppendLine("    return hostApplicationBuilder;")
+            .AppendLine()
+            .AppendLine("hostApplicationBuilder.Services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof(HostRegistrationMarker), new HostRegistrationMarker()));")
+            .AppendLine()
+            .AppendLine("var tagSet = new global::System.Collections.Generic.HashSet<string>(tags ?? global::System.Linq.Enumerable.Empty<string>());")
+            .AppendLine();
+
+        var moduleCount = 1;
+        foreach (var moduleRegistration in moduleRegistrations)
+        {
+            if (moduleRegistration.ParameterType != ModuleParameterType.HostApplicationBuilder)
+                continue;
+
+            moduleCount = WriteModule(codeBuilder, moduleRegistration, moduleCount, "hostApplicationBuilder");
+        }
+
+        codeBuilder
+            .AppendLine("return hostApplicationBuilder;")
+            .DecrementIndent()
+            .AppendLine("}");
     }
 
     private static void WriteRegistration(
