@@ -143,14 +143,6 @@ public class OpenGeneric<T> : IOpenGeneric<T> { }
 
 You can use generic attributes to register services if your project targets .NET 7.0+
 
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net7.0</TargetFrameworks>
-  </PropertyGroup>
-</Project>
-```
-
 Generic attributes allow declaration to be more compact by avoiding the typeof calls
 
 ```c#
