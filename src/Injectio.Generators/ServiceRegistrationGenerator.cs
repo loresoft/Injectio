@@ -203,6 +203,13 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
     private void ExecuteGeneration(SourceProductionContext sourceContext, RegistrationContext source)
     {
         var serviceRegistrations = source.ServiceRegistrations.AsArray();
+        if (serviceRegistrations.Length > 1 && serviceRegistrations.Any(static r => r.Order != 0))
+        {
+            // stable sort by order so registrations with equal order keep their discovery order
+            serviceRegistrations = serviceRegistrations
+                .OrderBy(static r => r.Order)
+                .ToArray();
+        }
 
         var moduleRegistrations = source.ModuleRegistrations.AsArray();
 
@@ -464,11 +471,12 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
         var tags = new HashSet<string>();
         string? serviceKey = null;
         bool isOpenGeneric = false;
+        int order = 0;
 
         var attributeClass = attribute.AttributeClass;
         if (attributeClass is { IsGenericType: true } && attributeClass.TypeArguments.Length == attributeClass.TypeParameters.Length)
         {
-            // if generic attribute, get service and implementation from generic type parameters
+            // if generic attribute
             for (var index = 0; index < attributeClass.TypeParameters.Length; index++)
             {
                 var typeParameter = attributeClass.TypeParameters[index];
@@ -526,6 +534,11 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
                     break;
                 case "Tags":
                     AddTags(tags, value.ToString());
+                    break;
+                case "Order":
+                    if (value is int orderValue)
+                        order = orderValue;
+
                     break;
             }
         }
@@ -593,7 +606,8 @@ public class ServiceRegistrationGenerator : IIncrementalGenerator
             Duplicate: duplicateStrategy ?? KnownTypes.DuplicateStrategySkipShortName,
             Registration: registrationStrategy ?? KnownTypes.RegistrationStrategySelfWithInterfacesShortName,
             Tags: [.. tags],
-            IsOpenGeneric: isOpenGeneric);
+            IsOpenGeneric: isOpenGeneric,
+            Order: order);
     }
 
     private static bool IsOpenGeneric(INamedTypeSymbol? typeSymbol)

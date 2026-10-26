@@ -109,6 +109,21 @@ namespace Injectio.Attributes
         /// The comma delimited list of service registration tags.
         /// </value>
         public string? Tags { get; set; }
+
+        /// <summary>
+        /// Gets or sets the order in which the service is registered. Lower values are registered first.
+        /// Registrations with the same order keep their default discovery order.
+        /// Use negative values to register before services that don't set an order, and positive values to register after them.
+        /// </summary>
+        /// <value>
+        /// The registration order. The default is <c>0</c>.
+        /// </value>
+        /// <remarks>
+        /// Ordering is useful in combination with <see cref="Duplicate"/>; for example, with <see cref="DuplicateStrategy.Skip"/>
+        /// the first registration wins, while with <see cref="DuplicateStrategy.Append"/> the order controls the
+        /// sequence of services resolved from <c>IEnumerable&lt;T&gt;</c>.
+        /// </remarks>
+        public int Order { get; set; }
     }
 
     /// <summary>

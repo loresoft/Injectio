@@ -647,6 +647,74 @@ public class ServiceRegistrationGeneratorTests
         return Verify(source);
     }
 
+    [Fact]
+    public Task GenerateRegisterOrder()
+    {
+        const string source = """
+
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterTransient<IService>(Duplicate = DuplicateStrategy.Append, Order = 3)]
+            public class ThirdService : IService { }
+
+            [RegisterScoped<IService>(Duplicate = DuplicateStrategy.Append, Order = 1)]
+            public class FirstService : IService { }
+
+            [RegisterSingleton<IService>(Duplicate = DuplicateStrategy.Append, Order = 2)]
+            public class SecondService : IService { }
+
+            [RegisterSingleton<IService>(Duplicate = DuplicateStrategy.Append, Order = -1)]
+            public class EarliestService : IService { }
+
+            """;
+
+        return Verify(source);
+    }
+
+    [Fact]
+    public void GenerateRegisterOrderSortsAcrossLifetimes()
+    {
+        const string source = """
+
+            using Injectio.Attributes;
+
+            namespace Injectio.Sample;
+
+            public interface IService { }
+
+            [RegisterTransient<IService>(Order = 2)]
+            public class TransientService : IService { }
+
+            [RegisterScoped<IService>]
+            public class ScopedDefaultService : IService { }
+
+            [RegisterSingleton<IService>(Order = 1)]
+            public class SingletonService : IService { }
+
+            [RegisterSingleton<IService>]
+            public class SingletonDefaultService : IService { }
+
+            """;
+
+        var output = GetGeneratedOutput<ServiceRegistrationGenerator>(source);
+
+        var scopedDefault = output.IndexOf("global::Injectio.Sample.ScopedDefaultService>", StringComparison.Ordinal);
+        var singletonDefault = output.IndexOf("global::Injectio.Sample.SingletonDefaultService>", StringComparison.Ordinal);
+        var singleton = output.IndexOf("global::Injectio.Sample.SingletonService>", StringComparison.Ordinal);
+        var transient = output.IndexOf("global::Injectio.Sample.TransientService>", StringComparison.Ordinal);
+
+        scopedDefault.Should().BeGreaterThan(0);
+
+        // default order (0) keeps discovery order: scoped pipeline before singleton pipeline
+        scopedDefault.Should().BeLessThan(singletonDefault);
+        singletonDefault.Should().BeLessThan(singleton);
+        singleton.Should().BeLessThan(transient);
+    }
+
 
     private static Task Verify(string source)
     {

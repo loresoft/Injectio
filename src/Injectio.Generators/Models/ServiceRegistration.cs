@@ -11,5 +11,6 @@ public record ServiceRegistration(
     string Duplicate,
     string Registration,
     EquatableArray<string> Tags,
-    bool IsOpenGeneric = false
+    bool IsOpenGeneric = false,
+    int Order = 0
 );

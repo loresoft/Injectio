@@ -51,6 +51,7 @@ Place registration attribute on class.  The class will be discovered and registe
 | Factory            | Name of a factory method to create new instances of the service implementation.                     |
 | Duplicate          | How the generator handles duplicate registrations. See Duplicate Strategy                           |
 | Registration       | How the generator determines what to register. See Registration Strategy                            |
+| Order              | The order the service is registered. Lower values first. Default is `0`; use negative values to go first. |
 
 #### Duplicate Strategy
 
@@ -103,6 +104,27 @@ public class ScopedService : IService { }
 [RegisterTransient]
 public class TransientService : IService { }
 ```
+
+#### Registration Order
+
+Use the `Order` property to control the order services are registered. Lower values are registered
+first; registrations with the same order keep their default discovery order. The default is `0`, so
+use negative values to register before services that don't set `Order`, and positive values to
+register after them. This is useful with `Duplicate`, for example the lowest order wins with `Skip`,
+and `Append` resolves `IEnumerable<T>` in order.
+
+```c#
+[RegisterSingleton<IService>(Duplicate = DuplicateStrategy.Append, Order = 1)]
+public class LastService : IService { }
+
+[RegisterSingleton<IService>(Duplicate = DuplicateStrategy.Append)]
+public class DefaultService : IService { }
+
+[RegisterSingleton<IService>(Duplicate = DuplicateStrategy.Append, Order = -1)]
+public class FirstService : IService { }
+```
+
+Resolution order for `IEnumerable<IService>` above: `FirstService`, `DefaultService`, `LastService`.
 
 #### Factories
 
