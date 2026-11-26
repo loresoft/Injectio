@@ -12,7 +12,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0" />
     <PackageVersion Include="MinVer" Version="8.0.0" />
-    <PackageVersion Include="Verify.XunitV3" Version="33.7.2" />
+    <PackageVersion Include="Verify.XunitV3" Version="33.7.3" />
     <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.3" />
     <PackageVersion Include="XUnit.Hosting" Version="5.0.0" />
   </ItemGroup>
